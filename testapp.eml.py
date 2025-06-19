@@ -1453,8 +1453,7 @@ RUN echo 'server { \
         } \
     } \
     \
-    # Static assets with long cache \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+    # Static assets with long cache        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
         expires 1y; \
         add_header Cache-Control "public, immutable"; \
         access_log off; \
