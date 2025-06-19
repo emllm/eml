@@ -5,7 +5,7 @@
 #
 # Ten plik jest jednocześnie:
 # 1. Wykonywalnym skryptem bash
-# 2. Prawidłowym plikiem EML z załącznikami
+# 2. Płynym plikiem EML z załącznikami
 #
 
 # Jeśli uruchomiono jako skrypt, obsłuż parametry
@@ -31,47 +31,67 @@ import email
 import os
 import sys
 import base64
+import json
+
+print('=== Debug: Starting EML parsing ===')
+print('Opening file: ' + os.path.abspath('$TEMP_DIR/content.eml'))
 
 with open('$TEMP_DIR/content.eml', 'rb') as f:
     msg = email.message_from_binary_file(f)
+    print('Message type: ' + str(type(msg)))
+    print('Message headers: ' + str(dict(msg.items())))
 
-extracted = []
-for part in msg.walk():
-    if part.get_content_maintype() == 'multipart':
-        continue
+    extracted = []
+    for part in msg.walk():
+        print('\n=== Part Info ===')
+        print('Content type: ' + part.get_content_type())
+        print('Content disposition: ' + str(part.get('content-disposition')))
+        print('Filename: ' + str(part.get_param('filename', header='content-disposition')))
 
-    filename = part.get_param('filename', header='content-disposition')
-    if not filename:
-        content_type = part.get_content_type()
-        if content_type == 'text/html':
-            filename = 'index.html'
-        elif content_type == 'text/css':
-            filename = 'style.css'
-        elif content_type == 'application/javascript':
-            filename = 'script.js'
-        elif 'dockerfile' in content_type.lower():
-            filename = 'Dockerfile'
-        else:
+        if part.get_content_maintype() == 'multipart':
+            print('Skipping multipart')
             continue
 
-    filepath = os.path.join('$TEMP_DIR', filename)
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        filename = part.get_param('filename', header='content-disposition')
+        if not filename:
+            content_type = part.get_content_type()
+            print('No filename, using content type: ' + content_type)
+            if content_type == 'text/html':
+                filename = 'index.html'
+            elif content_type == 'text/css':
+                filename = 'style.css'
+            elif content_type == 'application/javascript':
+                filename = 'script.js'
+            elif 'dockerfile' in content_type.lower():
+                filename = 'Dockerfile'
+            else:
+                print('Unknown content type: ' + content_type)
+                continue
 
-    try:
-        content = part.get_payload(decode=True)
-        if content is None:
-            content = part.get_payload().encode('utf-8')
+        filepath = os.path.join('$TEMP_DIR', filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-        with open(filepath, 'wb') as f:
-            f.write(content)
+        try:
+            content = part.get_payload(decode=True)
+            if content is None:
+                content = part.get_payload().encode('utf-8')
 
-        extracted.append(filename)
-        print(f'✓ {filename} ({len(content)} bytes)')
+            with open(filepath, 'wb') as f:
+                f.write(content)
 
-    except Exception as e:
-        print(f'✗ Error extracting {filename}: {e}')
+            extracted.append(filename)
+            print('✓ ' + filename + ' (' + str(len(content)) + ' bytes)')
 
-print(f'Extracted to: $TEMP_DIR')
+        except Exception as e:
+            print('✗ Error extracting ' + filename + ': ' + str(e))
+            import traceback
+            print('Traceback:')
+            print(traceback.format_exc())
+
+print('\n=== Final Summary ===')
+print('Extracted to: ' + os.path.abspath('$TEMP_DIR'))
+print('Extracted files: ' + json.dumps(extracted, indent=2))
+print('=== End of EML parsing ===')
 "
             ;;
 
@@ -94,38 +114,36 @@ print(f'Extracted to: $TEMP_DIR')
             echo "Otwieranie w przeglądarce..."
             $0 extract
 
-            if [ -f "$TEMP_DIR/index.html" ]; then
-                # Kopia plików do katalogu bieżącego
-                cp "$TEMP_DIR"/* .
-
+            # Sprawdź najpierw w katalogu bieżącym
+            if [ -f "index.html" ]; then
+                echo "Znaleziono index.html w katalogu bieżącym"
+                
                 # Zamień Content-ID references na lokalne pliki
                 python3 -c "
 import re
 import os
 
 html_file = 'index.html'
-with open(html_file, 'r') as f:
+with open(html_file, 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Zamień cid: references na lokalne pliki
-content = re.sub(r'src=["\\']cid:([^"\\'>]+)["\\']', r'src="\1"', content)
-content = re.sub(r'href=["\\']cid:([^"\\'>]+)["\\']', r'href="\1"', content)
+content = re.sub(r'src=[\"\']cid:([^\"\'>]+)[\"\']', r'src=\"\1\"', content)
+content = re.sub(r'href=[\"\']cid:([^\"\'>]+)[\"\']', r'href=\"\1\"', content)
 
 # Dodać ścieżki do wszystkich plików
-content = re.sub(r'<link rel="stylesheet" href="([^\"]+)"', r'<link rel="stylesheet" href="./\1"', content)
+content = re.sub(r'<link rel=\"stylesheet\" href=\"([^\"]+)\"', r'<link rel=\"stylesheet\" href=\"./\1\"', content)
 
-with open(html_file, 'w') as f:
+with open(html_file, 'w', encoding='utf-8') as f:
     f.write(content)
-"
 
                 # Otwórz w przeglądarce
                 if command -v xdg-open > /dev/null; then
-                    xdg-open "file://$TEMP_DIR/index.html"
+                    xdg-open "file://$PWD/index.html"
                 elif command -v open > /dev/null; then
-                    open "file://$TEMP_DIR/index.html"
+                    open "file://$PWD/index.html"
                 else
-                    echo "Otwórz w przeglądarce: file://$TEMP_DIR/index.html"
-                fi
+                    echo "Otwórz w przeglądarce: file://$PWD/index.html"
             else
                 echo "Błąd: Brak index.html w EML"
                 exit 1
@@ -133,20 +151,10 @@ with open(html_file, 'w') as f:
             ;;
 
         "info")
-            echo "Informacje o EML webapp:"
-            echo "Plik: $SCRIPT_FILE"
-            echo "Rozmiar: $(du -h "$SCRIPT_FILE" | cut -f1)"
-
-            # Pokaż nagłówki EML
-            EML_START=$(grep -n "^MIME-Version:" "$SCRIPT_FILE" | head -1 | cut -d: -f1)
-            if [ -n "$EML_START" ]; then
-                echo "EML Headers:"
-                sed -n "${EML_START},/^$/p" "$SCRIPT_FILE" | head -10
-            fi
-
-            # Policz załączniki
-            ATTACHMENTS=$(grep -c "Content-Disposition: attachment" "$SCRIPT_FILE" 2>/dev/null || echo "0")
-            echo "Załączniki: $ATTACHMENTS"
+            echo "Informacje o aplikacji:"
+            echo "Nazwa: $(grep -m 1 'X-App-Name:' "$SCRIPT_FILE" | cut -d: -f2-)"
+            echo "Typ: $(grep -m 1 'X-App-Type:' "$SCRIPT_FILE" | cut -d: -f2-)"
+            echo "Generator: $(grep -m 1 'X-Generator:' "$SCRIPT_FILE" | cut -d: -f2-)"
             ;;
 
         *)
