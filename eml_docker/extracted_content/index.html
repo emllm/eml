@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width�vice-width, initial-scale=1.0">
+    <title>Dashboard Faktur - Maj 2025</title>
+    <link rel="stylesheet" href="cid:style_css">
+</head>
+<body>
+    <header>
+        <h1>📊 Dashboard Faktur - Maj 2025</h1>
+        <nav>
+            <button onclick="showAll()">Wszystkie</button>
+            <button onclick="filterByStatus('paid')">Opłacone</button>
+            <button onclick="filterByStatus('pending')">Oczekujące</button>
+        </nav>
+    </header>
+
+    <main>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Łączna wartość</h3>
+                <span class="amount">15,750 PLN</span>
+            </div>
+            <div class="stat-card">
+                <h3>Faktury opłacone</h3>
+                <span class="count">8/12</span>
+            </div>
+        </div>
+
+        <div class="invoice-grid" id="invoiceGrid">
+            <div class="invoice-card" data-status="paid">
+                <img src="cid:invoice1_thumb" alt="Faktura 001" class="thumbnail">
+                <div class="invoice-info">
+                    <h4>Faktura #2025/05/001</h4>
+                    <p>Firma ABC Sp. z o.o.</p>
+                    <span class="amount">2,500 PLN</span>
+                    <span class="status paid">Opłacona</span>
+                </div>
+            </div>
+
+            <div class="invoice-card" data-status="pending">
+                <img src="cid:invoice2_thumb" alt="Faktura 002" class="thumbnail">
+                <div class="invoice-info">
+                    <h4>Faktura #2025/05/002</h4>
+                    <p>XYZ Solutions</p>
+                    <span class="amount">1,200 PLN</span>
+                    <span class="status pending">Oczekuje</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="cid:script_js"></script>
+</body>
+</html>

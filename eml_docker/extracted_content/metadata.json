@@ -1,0 +1,21 @@
+{
+  "name": "Faktury Maj 2025",
+  "version": "1.0.0",
+  "description": "Dashboard faktur za maj 2025",
+  "type": "webapp-eml",
+  "created": "2025-06-19",
+  "files": [
+    "index.html",
+    "style.css",
+    "script.js",
+    "invoice1_thumb.jpg",
+    "invoice2_thumb.jpg",
+    "Dockerfile"
+  ],
+  "stats": {
+    "total_invoices": 12,
+    "paid_invoices": 8,
+    "total_amount": "15750 PLN"
+  },
+  "tags": ["faktury", "maj", "2025", "dashboard"]
+}
