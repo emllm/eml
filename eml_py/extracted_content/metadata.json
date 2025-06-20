@@ -1,0 +1,133 @@
+{
+  "name": "Universal Faktury Dashboard",
+  "version": "1.0.0",
+  "description": "Cross-platform invoice dashboard - works on Windows, macOS, and Linux",
+  "type": "universal-webapp-eml",
+  "format": "eml-python-script",
+  "created": "2025-06-19T10:00:00Z",
+  "author": "Universal EML WebApp Generator",
+
+  "compatibility": {
+    "platforms": ["Windows", "macOS", "Linux", "Android", "iOS"],
+    "browsers": ["Chrome", "Firefox", "Safari", "Edge"],
+    "python_versions": ["3.6+", "3.7+", "3.8+", "3.9+", "3.10+", "3.11+"],
+    "requirements": {
+      "python3": "Built-in standard library only",
+      "docker": "Optional - for 'run' command"
+    }
+  },
+
+  "features": {
+    "universal": true,
+    "cross_platform": true,
+    "self_extracting": true,
+    "docker_ready": true,
+    "responsive_design": true,
+    "keyboard_shortcuts": true,
+    "native_notifications": true,
+    "touch_support": true,
+    "dark_mode_support": true,
+    "pwa_ready": false
+  },
+
+  "commands": {
+    "extract": "Extract files to temporary directory",
+    "run": "Run as Docker container on port 8080",
+    "browse": "Open in system default browser",
+    "info": "Show file and system information",
+    "help": "Display usage instructions"
+  },
+
+  "files": [
+    {
+      "name": "index.html",
+      "type": "text/html",
+      "description": "Main dashboard interface",
+      "features": ["responsive", "platform-detection", "animations"]
+    },
+    {
+      "name": "style.css", 
+      "type": "text/css",
+      "description": "Universal stylesheet with platform optimizations",
+      "features": ["cross-platform", "dark-mode", "responsive", "animations"]
+    },
+    {
+      "name": "script.js",
+      "type": "application/javascript", 
+      "description": "Cross-platform JavaScript with platform detection",
+      "features": ["platform-detection", "notifications", "keyboard-shortcuts", "touch-support"]
+    },
+    {
+      "name": "Dockerfile",
+      "type": "text/plain",
+      "description": "Universal Docker configuration",
+      "features": ["multi-platform", "health-checks", "optimized-nginx"]
+    },
+    {
+      "name": "invoice1_thumb.jpg",
+      "type": "image/jpeg",
+      "description": "Sample invoice thumbnail"
+    },
+    {
+      "name": "invoice2_thumb.jpg", 
+      "type": "image/jpeg",
+      "description": "Sample invoice thumbnail"
+    }
+  ],
+
+  "usage_examples": {
+    "windows": [
+      "python testapp.eml.py",
+      "python testapp.eml.py browse",
+      "python testapp.eml.py run",
+      "Double-click for GUI dialog"
+    ],
+    "macos": [
+      "./testapp.eml.py",
+      "python3 testapp.eml.py browse", 
+      "python3 testapp.eml.py run"
+    ],
+    "linux": [
+      "./testapp.eml.py",
+      "python3 testapp.eml.py browse",
+      "python3 testapp.eml.py run"
+    ]
+  },
+
+  "business_data": {
+    "total_invoices": 5,
+    "paid_invoices": 3,
+    "pending_invoices": 2,
+    "total_amount": "13,900 PLN",
+    "paid_amount": "9,900 PLN", 
+    "pending_amount": "4,000 PLN",
+    "completion_rate": "60%"
+  },
+
+  "technical_specs": {
+    "file_size_mb": "< 2",
+    "load_time_ms": "< 500",
+    "supported_resolutions": ["320px+", "tablet", "desktop", "4K"],
+    "mime_compliant": true,
+    "email_client_compatible": true,
+    "security": {
+      "xss_protection": true,
+      "csp_headers": true,
+      "cors_enabled": true,
+      "no_external_dependencies": true
+    }
+  },
+
+  "development": {
+    "build_system": "manual",
+    "testing": "cross-platform",
+    "deployment": "single-file",
+    "maintenance": "zero-dependency"
+  },
+
+  "tags": [
+    "universal", "cross-platform", "python", "eml", "webapp", 
+    "self-extracting", "docker", "responsive", "faktury", 
+    "dashboard", "maj-2025", "business"
+  ]
+}

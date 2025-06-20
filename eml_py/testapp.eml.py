@@ -20,6 +20,25 @@ import webbrowser
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
+def get_extract_dir() -> Path:
+    """Get or create the extraction directory."""
+    # Use eml_py/extracted_content instead of a temp directory
+    script_dir = Path(__file__).parent.resolve()
+    extract_dir = script_dir / 'extracted_content'
+    
+    # Create directory if it doesn't exist
+    extract_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Clean the directory
+    for item in extract_dir.glob('*'):
+        if item.is_file():
+            item.unlink()
+        elif item.is_dir():
+            shutil.rmtree(item)
+    
+    print(f"📂 Using extraction directory: {extract_dir}")
+    return extract_dir
+
 # Add support for more MIME types
 mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('text/css', '.css')
@@ -117,17 +136,19 @@ def check_docker() -> bool:
     except (OSError, subprocess.SubprocessError):
         return False
 
-def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], List[str]]:
-    """Extract EML content from the script file.
+def extract_eml_content(script_path: Union[str, Path], output_dir: Optional[Union[str, Path]] = None) -> Tuple[Path, List[str]]:
+    """Extract EML content from the script and save to files.
     
     Args:
-        script_path: Path to the script file containing EML content.
+        script_path: Path to the script containing EML content
+        output_dir: Directory to extract files to. If None, uses the default extract directory.
         
     Returns:
-        A tuple containing:
-            - The EML content as a string (or None if not found)
-            - A list of extracted files (always empty in this implementation)
+        A tuple of (output_directory, list_of_extracted_files)
     """
+    output_dir = Path(output_dir) if output_dir else get_extract_dir()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     try:
         script_path = Path(script_path).resolve()
         print("🔍 Searching for EML content in script...")
@@ -141,7 +162,7 @@ def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], L
         start_idx = script_content.find(start_marker)
         if start_idx == -1:
             print("❌ EML start marker not found in script")
-            return None, []
+            return output_dir, []
         
         print(f"✅ Found EML start marker at position {start_idx}")
         
@@ -159,7 +180,7 @@ def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], L
         
         if eml_start_line == -1:
             print("❌ Could not find start of EML content (MIME-Version header)")
-            return None, []
+            return output_dir, []
             
         print(f"✅ Found EML content start at line {eml_start_line}")
         
@@ -179,17 +200,17 @@ def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], L
         # Verify we have content
         if not eml_content:
             print("❌ No EML content found after start marker")
-            return None, []
+            return output_dir, []
         
         # Verify this looks like valid EML content
         if not eml_content.startswith('MIME-Version:'):
             print("❌ Invalid EML content: Missing MIME-Version header")
             print("First 100 chars of content:", eml_content[:100])
-            return None, []
+            return output_dir, []
             
         if 'Content-Type:' not in eml_content:
             print("❌ Invalid EML content: Missing Content-Type header")
-            return None, []
+            return output_dir, []
             
         # Ensure the EML content ends with the boundary
         boundary = '--UNIVERSAL_WEBAPP_BOUNDARY--'
@@ -198,13 +219,22 @@ def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], L
             eml_content = eml_content.rstrip() + "\n" + boundary + "\n"
         
         print(f"✅ Extracted {len(eml_content)} bytes of EML content")
-        return eml_content, []
+        
+        # Save the EML content
+        eml_path = output_dir / 'original.eml'
+        with open(eml_path, 'w', encoding='utf-8') as f:
+            f.write(eml_content)
+        
+        # Extract files from EML
+        extracted_files = extract_from_eml(eml_path, output_dir)
+        print(f"\n✅ Extracted {len(extracted_files)} files to: {output_dir}")
+        return output_dir, [f['filename'] for f in extracted_files if 'filename' in f]
         
     except Exception as e:
         print(f"❌ Error extracting EML content: {e}")
         import traceback
         traceback.print_exc()
-        return None, []
+        return output_dir, []
 
 def update_html_references(html_path: str, cid_map: Dict[str, str]) -> None:
     """Update HTML file to use relative paths for resources (flat structure)
@@ -390,76 +420,26 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
 
 def action_extract(script_path: str, output_dir: str = None) -> str:
     """Extract EML content to the specified directory.
-    
-    Args:
-        script_path: Path to the script containing EML content
-        output_dir: Directory to extract to (default: temp directory)
-        
-    Returns:
-        Path to the directory containing extracted files
-    """
     if output_dir is None:
-        import tempfile
-        output_dir = tempfile.mkdtemp(prefix='webapp_')
+        output_dir = get_extract_dir()
     else:
         os.makedirs(output_dir, exist_ok=True)
     
-    eml_content, _ = extract_eml_content(script_path)
-    if not eml_content:
-        raise ValueError("No EML content found in script")
-    
-    # Save the EML content
-    eml_path = os.path.join(output_dir, 'original.eml')
-    with open(eml_path, 'w', encoding='utf-8') as f:
-        f.write(eml_content)
+    try:
+        output_dir, extracted_files = extract_eml_content(script_path, output_dir)
+        print(f"\n✅ Extracted {len(extracted_files)} files to: {output_dir}")
+        print("\nExtracted files:")
+        for file in sorted(extracted_files):
+            print(f"- {file}")
+    except Exception as e:
+        print(f"❌ Error during extraction: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Extract files from EML
     extracted_files = extract_from_eml(eml_path, output_dir)
     print(f"\n✅ Extracted {len(extracted_files)} files to: {output_dir}")
     return output_dir
-
-
-def action_run(script_path: str, port: int = DEFAULT_PORT) -> None:
-    """Run the web application locally.
-    
-    Args:
-        script_path: Path to the script containing EML content
-        port: Port to run the server on
-    """
-    # Extract to a temporary directory
-    temp_dir = action_extract(script_path)
-    
-    # Find the main HTML file
-    index_path = os.path.join(temp_dir, 'index.html')
-    if not os.path.exists(index_path):
-        html_files = [f for f in os.listdir(temp_dir) 
-                     if f.endswith('.html')]
-        if html_files:
-            index_path = os.path.join(temp_dir, html_files[0])
-    
-    if not os.path.exists(index_path):
-        raise FileNotFoundError("No HTML file found in extracted content")
-    
-    # Start HTTP server
-    import http.server
-    import socketserver
-    import webbrowser
-    
-    os.chdir(temp_dir)
-    handler = http.server.SimpleHTTPRequestHandler
-    httpd = socketserver.TCPServer(("", port), handler)
-    
-    url = f"http://localhost:{port}"
-    print(f"\n🌐 Starting web server at {url}")
-    print("Press Ctrl+C to stop the server")
-    
-    try:
-        webbrowser.open(url)
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\n🛑 Server stopped")
-    finally:
-        httpd.server_close()
 
 
 def action_browse(script_path: str) -> None:
@@ -471,47 +451,6 @@ def action_browse(script_path: str) -> None:
     # Extract to a temporary directory
     temp_dir = action_extract(script_path)
     
-    # Try to find index.html first
-    index_path = os.path.join(temp_dir, 'index.html')
-    
-    # If index.html doesn't exist, try to find HTML content in the extracted files
-    if not os.path.exists(index_path):
-        print("Looking for HTML content in EML...")
-        
-        # Look for HTML files in the extracted files
-        html_files = [f for f in os.listdir(temp_dir) 
-                     if f.endswith('.html')]
-        if html_files:
-            index_path = os.path.join(temp_dir, html_files[0])
-            print(f"Found HTML file: {os.path.basename(index_path)}")
-        else:
-            # If no HTML files found, try to find HTML content in the EML
-            eml_file = os.path.join(temp_dir, 'original.eml')
-            if os.path.exists(eml_file):
-                with open(eml_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                # Look for HTML content in the EML
-                html_start = content.lower().find('<html')
-                if html_start != -1:
-                    # Create index.html with the HTML content
-                    index_path = os.path.join(temp_dir, 'index.html')
-                    with open(index_path, 'w', encoding='utf-8') as f:
-                        f.write(content[html_start:])
-                    print("Extracted HTML content from EML")
-                else:
-                    print("No HTML content found in EML")
-                    return
-            else:
-                print("No EML file to process")
-                return
-    
-    # Open the HTML file in the default browser
-    print(f"Opening {os.path.basename(index_path)} in browser...")
-    webbrowser.open(f"file://{os.path.abspath(index_path)}")
-    
-    temp_dir, files = extract_eml_content(script_path)
-
     # Try to find index.html first
     index_path = os.path.join(temp_dir, 'index.html')
     
@@ -634,7 +573,7 @@ def action_info(script_path):
 
 def show_help():
     """Pokaż pomoc"""
-    help_text = """
+    help_text = u"""
 🎯 EML WebApp - Uniwersalny samorozpakowujący się skrypt
 
 💻 Użycie:
@@ -650,15 +589,14 @@ def show_help():
 
 🌍 Kompatybilność:
    ✅ Windows (Python 3.6+)
-   ✅ macOS (Python 3.6+) 
+   ✅ macOS (Python 6+) 
    ✅ Linux (Python 3.6+)
 
 🔧 Wymagania:
    - Python 3.6+ (standardowo dostępny)
    - Docker (opcjonalnie, dla komendy 'run')
 
-📧 Ten plik jest również prawidłowym emailem EML!
-"""
+📧 Ten plik jest również prawidłowym emailem EML!"""
     print(help_text)
 
 
@@ -738,30 +676,88 @@ def main():
         sys.exit(1)
 
 
-# Uruchom tylko jeśli wywołano jako skrypt
-if __name__ == '__main__':
-    main()
-
 # ====================================================================
-# EML CONTENT STARTS HERE
-# Ten kod nigdy nie będzie wykonany jako Python, ale będzie 
-# interpretowany jako prawidłowy plik EML przez parsery MIME
+# EML CONTENT - This is a properly formatted EML file
 # ====================================================================
 
-"""
-MIME-Version: 1.0
-Subject: 🌍 Universal WebApp - Faktury Maj 2025
+def get_eml_content():
+    """Return the EML content as a string."""
+    return """MIME-Version: 1.0
+Subject: =?utf-8?b?8J+MiSBVbml2ZXJzYWwgRGFzaGJvYXJkIC0gRmFrdHVyeSBNYWogMjAyNQ==?=
 Content-Type: multipart/mixed; boundary=UNIVERSAL_WEBAPP_BOUNDARY
 X-App-Type: universal-webapp
 X-App-Name: Faktury Maj 2025
 X-Generator: Universal-EML-Script-Generator
 X-Compatible-Platforms: Windows,macOS,Linux
-X-Python-Version: 3.6+
+Python-Version: 3.6
 
 --UNIVERSAL_WEBAPP_BOUNDARY
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Universal Dashboard - Faktury</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="platform-indicator" id="platformIndicator">
+        <span id="platformIcon">🌍</span>
+        <span id="platformName">Universal</span>
+    </div>
+    
+    <div class="container">
+        <h1>📊 Universal Faktury Dashboard</h1>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Łącznie faktur</h3>
+                <p class="stat-value" id="totalInvoices">5</p>
+            </div>
+            <div class="stat-card">
+                <h3>Zapłacone</h3>
+                <p class="stat-value" id="paidInvoices">3</p>
+            </div>
+            <div class="stat-card">
+                <h3>Do zapłaty</h3>
+                <p class="stat-value" id="pendingInvoices">2</p>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button onclick="showAll()">Pokaż wszystkie</button>
+            <button onclick="showPaid()">Tylko zapłacone</button>
+            <button onclick="showPending()">Do zapłaty</button>
+            <button onclick="addNew()">+ Nowa faktura</button>
+        </div>
+        
+        <div id="invoiceList" class="invoice-list">
+            <!-- Invoices will be dynamically inserted here -->
+        </div>
+    </div>
+    
+    <footer>
+        <p>🌍 Universal EML WebApp - Compatible with all platforms</p>
+        <p>🐍 Powered by Python | 📧 Valid EML format</p>
+    </footer>
+</body>
+</html>
+
+--UNIVERSAL_WEBAPP_BOUNDARY
+Content-Type: text/css; name="style.css"
+Content-Disposition: attachment; filename="style.css"
+Content-Transfer-Encoding: base64
+
+LyogQmFzZSBzdHlsZXMgKi8KOmhvc3QgewogICAgLS1wcmltYXJ5OiAjNDI4NWY0OwogICAgLS1zZWNvbmRhcnk6ICMzNzc5YjU7CiAgICAtLXN1Y2Nlc3M6ICMyZTdlNGI7CiAgICAtLWluZm86ICMxN2EyYjg7CiAgICAtLXdhcm5pbmc6ICNmZjYwMDA7CiAgICAtLWRhbmdlcjogI2RjMzU0NTsKICAgIC0tbGlnaHQ6ICNmOGY5ZmE7CiAgICAtLWRhcms6ICMzNDNhNDA7CiAgICAtLWdyYXktMTAwOiAjZjhmOWZhOwogICAgLS1ncmF5LTIwMDogI2U5ZWNmMTsKICAgIC0tZ3JheS0zMDA6ICNkZWRlZTc7CiAgICAtLWdyYXktNDAwOiAjY2JkNWQzOwogICAgLS1ncmF5LTUwMDogIzllYTVhYjsKICAgIC0tZ3JheS02MDA6ICM2Yzc0ODA7CiAgICAtLWdyYXktNzAwOiAjNDk1MDU3OwogICAgLS1ncmF5LTgwMCAjM2QzYzRlOwogICAgLS1ncmF5LTkwMCAjMzQzYzQ3OwogICAgLS1mb250LXNhbnM6IC1hcHBsZS1zeXN0ZW0sIEJsaW5rTWFjU3lzdGVtRm9udCwgIlNlZ29lIFVJIiwgUm9ib3RvLCAiSGVsdmV0aWNhIE5ldWUiLCBBcmlhbCwgc2Fucy1zZXJpZiwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIiwgIlNlZ29lIFVJIFN5bWJvbCI7Cn0KCmJvZHkgewogICAgZm9udC1mYW1pbHk6IHZhcigtLWZvbnQtc2Fucyk7CiAgICBsaW5lLWhlaWdodDogMS41OwogICAgY29sb3I6IHZhcigtLWRhcms7CiAgICBtYXJnaW46IDA7CiAgICBwYWRkaW5nOiAwOwogICAgYmFja2dyb3VuZC1jb2xvcjogI2Y4ZjlmYTsKfQoKLyogQ29udGFpbmVyICovCi5jb250YWluZXIgewogICAgbWF4LXdpZHRoOiAxMjAwcHg7CiAgICBtYXJnaW46IDAgYXV0bzsKICAgIHBhZGRpbmc6IDIwcHg7Cn0KCi8qIFBsYXRmb3JtIGluZGljYXRvciAqLwo="""
+
+# Uruchom tylko jeśli wywołano jako skrypt
+if __name__ == '__main__':
+    main()
+Content-Transfer-Encoding: quoted-printable
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -769,7 +765,7 @@ Content-Transfer-Encoding: quoted-printable
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌍 Universal Dashboard - Faktury Maj 2025</title>
-    <link rel="stylesheet" href="cid:style_css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="platform-indicator" id="platformIndicator">

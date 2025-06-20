@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width�vice-width, initial-scale=1.0">
+    <title>🌍 Universal Dashboard - Faktury Maj 2025</title>
+    <link rel="stylesheet" href="cid:style_css">
+</head>
+<body>
+    <div class="platform-indicator" id="platformIndicator">
+        <span id="platformIcon">🌍</span>
+        <span id="platformName">Universal</span>
+    </div>
+
+    <header>
+        <h1>🌍 Universal Dashboard - Faktury Maj 2025</h1>
+        <p class="subtitle">Działa na Windows, macOS i Linux</p>
+        <nav>
+            <button onclick="showAll()" class="btn-primary">Wszystkie</button>
+            <button onclick="filterByStatus('paid')" class="btn-success">Opłacone</button>
+            <button onclick="filterByStatus('pending')" class="btn-warning">Oczekujące</button>
+            <button onclick="showStats()" class="btn-info">Statystyki</button>
+        </nav>
+    </header>
+
+    <main>
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-icon">💰</div>
+                <div class="stat-content">
+                    <h3>Łączna wartość</h3>
+                    <span class="amount" id="totalAmount">15,750 PLN</span>
+                </div>
+            </div>
+
+            <div class="stat-card paid">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <h3>Faktury opłacone</h3>
+                    <span class="count" id="paidCount">8/12</span>
+                </div>
+            </div>
+
+            <div class="stat-card pending">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-content">
+                    <h3>Oczekujące</h3>
+                    <span class="count" id="pendingCount">4</span>
+                </div>
+            </div>
+
+            <div class="stat-card progress">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <h3>Postęp</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 67%"></div>
+                    </div>
+                    <span class="percentage">67%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="invoice-grid" id="invoiceGrid">
+            <div class="invoice-card" data-status="paid" data-amount="2500">
+                <div class="invoice-header">
+                    <span class="invoice-number">#2025/05/001</span>
+                    <span class="status paid">Opłacona</span>
+                </div>
+                <div class="invoice-content">
+                    <img src="cid:invoice1_thumb" alt="Faktura 001" class="thumbnail">
+                    <div class="invoice-details">
+                        <h4>📄 Firma ABC Sp. z o.o.</h4>
+                        <p class="description">Usługi IT - maj 2025</p>
+                        <div class="amount-large">2,500 PLN</div>
+                        <div class="invoice-meta">
+                            <span>📅 2025-05-15</span>
+                            <span>💳 Przelew</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="invoice-card" data-status="pending" data-amount="1200">
+                <div class="invoice-header">
+                    <span class="invoice-number">#2025/05/002</span>
+                    <span class="status pending">Oczekuje</span>
+                </div>
+                <div class="invoice-content">
+                    <img src="cid:invoice2_thumb" alt="Faktura 002" class="thumbnail">
+                    <div class="invoice-details">
+                        <h4>📄 XYZ Solutions</h4>
+                        <p class="description">Konsultacje - maj 2025</p>
+                        <div class="amount-large">1,200 PLN</div>
+                        <div class="invoice-meta">
+                            <span>📅 2025-05-20</span>
+                            <span>⏳ 5 dni</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="invoice-card" data-status="paid" data-amount="3200">
+                <div class="invoice-header">
+                    <span class="invoice-number">#2025/05/003</span>
+                    <span class="status paid">Opłacona</span>
+                </div>
+                <div class="invoice-content">
+                    <img src="cid:invoice1_thumb" alt="Faktura 003" class="thumbnail">
+                    <div class="invoice-details">
+                        <h4>📄 Tech Innovators Ltd</h4>
+                        <p class="description">Rozwój aplikacji</p>
+                        <div class="amount-large">3,200 PLN</div>
+                        <div class="invoice-meta">
+                            <span>📅 2025-05-10</span>
+                            <span>💳 BLIK</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>🌍 Universal EML WebApp - Compatible with all platforms</p>
+        <p>🐍 Powered by Python | 📧 Valid EML format</p>
+    </footer>
+
+    <script src="cid:script_js"></script>
+</body>
+</html>
