@@ -92,9 +92,21 @@ print(f'Extracted to: $TEMP_DIR')
 
         "browse")
             echo "Otwieranie w przeglądarce..."
-            $0 extract
-
+            # Debug: List all extracted files
+            echo "Debug: Listing files in $TEMP_DIR:"
+            ls -la "$TEMP_DIR/"
+            echo ""
+            echo "Debug: Checking for index.html..."
+            
+            # Check if index.html exists
             if [ -f "$TEMP_DIR/index.html" ]; then
+                echo "Debug: Found index.html at $TEMP_DIR/index.html"
+                echo "Debug: File details:"
+                ls -la "$TEMP_DIR/index.html"
+                echo ""
+                echo "Debug: First few lines of index.html:"
+                head -n 5 "$TEMP_DIR/index.html"
+                echo ""
                 # Zamień Content-ID references na lokalne pliki
                 python3 -c "
 import re
@@ -113,13 +125,29 @@ with open(html_file, 'w') as f:
 "
 
                 # Otwórz w przeglądarce
-                if command -v xdg-open > /dev/null; then
-                    xdg-open "file://$TEMP_DIR/index.html"
-                elif command -v open > /dev/null; then
-                    open "file://$TEMP_DIR/index.html"
+                echo "Files extracted to: $TEMP_DIR"
+                echo "Trying to open: file://$TEMP_DIR/index.html"
+                
+                # Start a simple Python HTTP server in the background
+                (cd "$TEMP_DIR" && python3 -m http.server 8080 &) >/dev/null 2>&1
+                SERVER_PID=$!
+                
+                # Give the server a moment to start
+                sleep 1
+                
+                # Open the browser
+                if command -v xdg-open >/dev/null 2>&1; then
+                    xdg-open "http://localhost:8080"
+                elif command -v open >/dev/null 2>&1; then
+                    open "http://localhost:8080"
                 else
-                    echo "Otwórz w przeglądarce: file://$TEMP_DIR/index.html"
+                    echo "Otwórz w przeglądarce: http://localhost:8080"
                 fi
+                
+                # Wait for user to press Enter before killing the server
+                echo "Naciśnij Enter, aby zatrzymać serwer..."
+                read
+                kill $SERVER_PID
             else
                 echo "Błąd: Brak index.html w EML"
                 exit 1
