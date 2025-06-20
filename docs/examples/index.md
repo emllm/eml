@@ -1,13 +1,13 @@
-# Przykłady użycia LLME
+# Przykłady użycia EMLLM
 
 ## 📝 Przykład podstawowy
 
 ```python
-from llme.core import PEMLParser
-from llme.validator import PEMLValidator
+from emllm.core import emllmParser
+from emllm.validator import emllmValidator
 
 # Przykładowa wiadomość
-peml_content = """
+emllm_content = """
 From: test@example.com
 To: recipient@example.com
 Subject: Test
@@ -16,14 +16,14 @@ Hello World
 """
 
 # Analiza
-parser = PEMLParser()
-message = parser.parse(peml_content)
+parser = emllmParser()
+message = parser.parse(emllm_content)
 
 # Konwersja do słownika
 data = parser.to_dict(message)
 
 # Walidacja
-validator = PEMLValidator()
+validator = emllmValidator()
 validator.validate(data)
 ```
 
@@ -47,7 +47,7 @@ response = requests.post(
 # Konwersja
 response = requests.post(
     "http://localhost:8000/convert",
-    params={"from_format": "peml", "to_format": "json"},
+    params={"from_format": "emllm", "to_format": "json"},
     json={"content": "From: test@example.com\nTo: recipient@example.com\nSubject: Test"}
 )
 ```
@@ -56,22 +56,22 @@ response = requests.post(
 
 ```bash
 # Analiza
-llme parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
+emllm parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
 
 # Walidacja
-llme validate "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
+emllm validate "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
 
 # Konwersja
-llme convert --from peml --to json "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
+emllm convert --from emllm --to json "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
 ```
 
 ## 📝 Przykład z załącznikami
 
 ```python
-from llme.core import PEMLParser
+from emllm.core import emllmParser
 
 # Wiadomość z załącznikiem
-peml_content = """
+emllm_content = """
 From: test@example.com
 To: recipient@example.com
 Subject: Test with attachment
@@ -86,8 +86,8 @@ This is an attachment
 --
 """
 
-parser = PEMLParser()
-message = parser.parse(peml_content)
+parser = emllmParser()
+message = parser.parse(emllm_content)
 data = parser.to_dict(message)
 
 # Dostęp do załącznika

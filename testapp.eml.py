@@ -579,7 +579,7 @@ if __name__ == '__main__':
 """
 MIME-Version: 1.0
 Subject: 🌍 Universal WebApp - Faktury Maj 2025
-Content-Type: multipart/mixed; boundary="UNIVERSAL_WEBAPP_BOUNDARY"
+Content-Type: multipart/mixed; boundary=UNIVERSAL_WEBAPP_BOUNDARY
 X-App-Type: universal-webapp
 X-App-Name: Faktury Maj 2025
 X-Generator: Universal-EML-Script-Generator
@@ -589,7 +589,7 @@ X-Python-Version: 3.6+
 --UNIVERSAL_WEBAPP_BOUNDARY
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Content-Disposition: inline; filename="index.html"
+
 
 <!DOCTYPE html>
 <html lang="pl">

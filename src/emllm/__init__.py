@@ -1,1 +1,1 @@
-"""LLME (Large Language Model Email Message Language) Implementation"""
+"""emllm (Large Language Model Email Message Language) Implementation"""

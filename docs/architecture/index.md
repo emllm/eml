@@ -1,11 +1,11 @@
-# Architektura LLME
+# Architektura emllm
 
 ## 🏗️ Struktura projektu
 
 ```
-llme/
+emllm/
 ├── src/
-│   └── llme/
+│   └── emllm/
 │       ├── __init__.py
 │       ├── api.py
 │       ├── core.py
@@ -26,8 +26,8 @@ llme/
 
 ### Core
 
-- `PEMLParser`: analiza i konwersja wiadomości
-- `PEMLValidator`: walidacja wiadomości
+- `emllmParser`: analiza i konwersja wiadomości
+- `emllmValidator`: walidacja wiadomości
 
 ### API
 
@@ -43,11 +43,11 @@ llme/
 
 ## 🔄 Workflow
 
-1. **Wejście**: Wiadomość PEML lub JSON
-2. **Analiza**: PEMLParser
-3. **Walidacja**: PEMLValidator
-4. **Konwersja**: PEMLParser
-5. **Wyjście**: Wiadomość PEML lub JSON
+1. **Wejście**: Wiadomość emllm lub JSON
+2. **Analiza**: emllmParser
+3. **Walidacja**: emllmValidator
+4. **Konwersja**: emllmParser
+5. **Wyjście**: Wiadomość emllm lub JSON
 
 ## 🔧 Konfiguracja
 

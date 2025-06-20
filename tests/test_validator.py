@@ -1,8 +1,8 @@
 import pytest
-from .peml.validator import PEMLValidator
+from emllm.validator import emllmValidator
 
 def test_valid_message():
-    validator = PEMLValidator()
+    validator = emllmValidator()
     data = {
         'headers': {
             'From': 'test@example.com',
@@ -15,7 +15,7 @@ def test_valid_message():
     validator.validate(data)
 
 def test_missing_required_header():
-    validator = PEMLValidator()
+    validator = emllmValidator()
     data = {
         'headers': {
             'From': 'test@example.com',
@@ -30,7 +30,7 @@ def test_missing_required_header():
     assert 'Missing required header: To' in str(exc_info.value)
 
 def test_invalid_email_address():
-    validator = PEMLValidator()
+    validator = emllmValidator()
     data = {
         'headers': {
             'From': 'invalid-email',
@@ -46,7 +46,7 @@ def test_invalid_email_address():
     assert 'Invalid email address in From' in str(exc_info.value)
 
 def test_invalid_content_type():
-    validator = PEMLValidator()
+    validator = emllmValidator()
     data = {
         'headers': {
             'From': 'test@example.com',
@@ -67,7 +67,7 @@ def test_invalid_content_type():
     assert 'Invalid content_type' in str(exc_info.value)
 
 def test_missing_content_type():
-    validator = PEMLValidator()
+    validator = emllmValidator()
     data = {
         'headers': {
             'From': 'test@example.com',

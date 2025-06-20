@@ -1,4 +1,4 @@
-# Project Makefile for LLME (Large Language Model Email Message Language)
+# Project Makefile for emllm (Large Language Model Email Message Language)
 
 # Project name
 PROJECT_NAME = emllm
@@ -66,7 +66,7 @@ build:
 .PHONY: publish
 publish:
 	$(POETRY) build
-	$(POETRY) publish --build --no-interaction --build
+	$(POETRY) publish --no-interaction
 
 # Generate documentation
 .PHONY: docs
@@ -82,12 +82,12 @@ clean:
 # Start REST server
 .PHONY: start-server
 start-server:
-	$(PYTHON) -m peml.cli rest --host 0.0.0.0 --port 8000
+	$(PYTHON) -m emllm.cli rest --host 0.0.0.0 --port 8000
 
 # Test message parsing
 .PHONY: test-message
 test-message:
-	$(PYTHON) -m peml.cli parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
+	$(PYTHON) -m emllm.cli parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
 
 # Run full test suite
 .PHONY: test-all

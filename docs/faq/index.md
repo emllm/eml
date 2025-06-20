@@ -2,15 +2,15 @@
 
 ## 🛠️ Instalacja
 
-### Jak zainstalować LLME z PyPI?
+### Jak zainstalować EMLLM z PyPI?
 ```bash
-pip install llme
+pip install emllm
 ```
 
-### Jak zainstalować LLME z źródeł?
+### Jak zainstalować EMLLM z źródeł?
 ```bash
-git clone https://github.com/tomsapletta/llme.git
-cd llme
+git clone https://github.com/emllm/eml.git
+cd eml
 poetry install
 ```
 
@@ -18,7 +18,7 @@ poetry install
 
 ### Jak używać CLI?
 ```bash
-llme parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
+emllm parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
 ```
 
 ### Jak używać REST API?

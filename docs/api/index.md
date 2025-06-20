@@ -1,13 +1,13 @@
-# API LLME
+# API emllm
 
 ## 📚 Moduły
 
 ### Core
 
 ```python
-class PEMLParser:
-    def parse(self, peml_content: str) -> EmailMessage:
-        """Analiza wiadomości PEML"""
+class emllmParser:
+    def parse(self, emllm_content: str) -> EmailMessage:
+        """Analiza wiadomości emllm"""
     
     def to_dict(self, message: EmailMessage) -> Dict[str, Any]:
         """Konwersja do słownika"""
@@ -18,14 +18,14 @@ class PEMLParser:
 ### Validator
 
 ```python
-class PEMLValidator:
+class emllmValidator:
     def validate(self, data: Dict[str, Any]) -> None:
         """Walidacja wiadomości"""
 
 ### CLI
 
 ```python
-class PEMLCLI:
+class emllmCLI:
     def parse(self, content: str) -> str:
         """Analiza wiadomości"""
     
@@ -48,7 +48,7 @@ GET /health
 
 # /parse
 POST /parse
-Body: {"content": "PEML content"}
+Body: {"content": "emllm content"}
 
 # /generate
 POST /generate
@@ -59,9 +59,9 @@ Body: {
 
 # /validate
 POST /validate
-Body: {"content": "PEML content"}
+Body: {"content": "emllm content"}
 
 # /convert
-POST /convert?from_format=peml&to_format=json
-Body: {"content": "PEML content"}
+POST /convert?from_format=emllm&to_format=json
+Body: {"content": "emllm content"}
 ```

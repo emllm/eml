@@ -1,14 +1,14 @@
-# Konfiguracja LLME
+# Konfiguracja EMLLM
 
 ## 🛠️ Pyproject.toml
 
 ```toml
 [tool.poetry]
-name = "llme"
+name = "emllm"
 version = "0.1.1"
 description = "Large Language Model Email Message registry and interpreter"
 authors = ["Tom Sapletta <info@softreck.dev>"]
-packages = [{include = "llme", from = "src"}]
+packages = [{include = "emllm", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -30,16 +30,16 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-llme = "llme.cli:main"
+emllm = "emllm.cli:main"
 ```
 
 ## 📝 Makefile
 
 ```makefile
-# Project Makefile for LLME
+# Project Makefile for emllm
 
 # Project name
-PROJECT_NAME = llme
+PROJECT_NAME = emllm
 
 # Poetry environment
 POETRY := poetry
@@ -67,7 +67,7 @@ publish:
 
 .PHONY: docs
 docs:
-	pdoc --html --output-dir docs/html src/llme
+	pdoc --html --output-dir docs/html src/emllm
 
 .PHONY: test
 test:

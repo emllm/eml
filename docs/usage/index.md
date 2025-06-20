@@ -2,7 +2,7 @@
 
 ## 📱 CLI
 
-LLME oferuje interfejs wiersza poleceń (CLI) do pracy z wiadomościami email:
+emllm oferuje interfejs wiersza poleceń (CLI) do pracy z wiadomościami email:
 
 ```bash
 emllm parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
@@ -17,7 +17,7 @@ Dostępne komendy:
 
 ## 🌐 REST API
 
-LLME udostępnia REST API na porcie 8000:
+emllm udostępnia REST API na porcie 8000:
 
 ### Endpoints:
 
@@ -30,15 +30,15 @@ LLME udostępnia REST API na porcie 8000:
 ## 📝 Przykład użycia
 
 ```python
-from emllm.core import PEMLParser
-from emllm.validator import PEMLValidator
+from emllm.core import emllmParser
+from emllm.validator import emllmValidator
 
 # Analiza wiadomości
-parser = PEMLParser()
+parser = emllmParser()
 message = parser.parse("From: test@example.com\nTo: recipient@example.com\nSubject: Test")
 
 # Walidacja
-validator = PEMLValidator()
+validator = emllmValidator()
 validator.validate(message)
 
 # Konwersja do słownika

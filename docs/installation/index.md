@@ -1,8 +1,8 @@
-# Instalacja LLME
+# Instalacja emllm
 
 ## 📦 Instalacja z PyPI
 
-Najprostszym sposobem instalacji LLME jest użycie pip:
+Najprostszym sposobem instalacji emllm jest użycie pip:
 
 ```bash
 pip install emllm

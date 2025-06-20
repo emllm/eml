@@ -4,7 +4,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/emllm)](https://pypi.org/project/emllm/)
 [![License](https://img.shields.io/github/license/emllm/eml)](LICENSE)
 
-LLME to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
+emllm to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
 
 ## 📚 Dokumentacja
 
@@ -20,7 +20,7 @@ Pełna dokumentacja dostępna w katalogu [docs/](docs/):
 ## 🛠️ Instalacja
 
 ```bash
-pip install llme
+pip install emllm
 - Trudność w code signing i verification
 - Podatność na email interception
 
@@ -266,9 +266,9 @@ System składa się z trzech głównych komponentów:
 ## 📁 Struktura projektu
 
 ```
-llme/
+emllm/
 ├── src/
-│   └── llme/
+│   └── emllm/
 │       ├── __init__.py
 │       ├── api.py
 │       ├── core.py
@@ -876,7 +876,7 @@ python faktury-maj.eml.py [komenda]
 ### Z PyPI
 
 ```bash
-pip install llme
+pip install emllm
 ```
 
 ### Z źródeł

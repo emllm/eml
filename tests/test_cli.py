@@ -6,7 +6,7 @@ import os
 def test_cli_parse():
     result = subprocess.run(
         [
-            "python", "-m", "peml.cli", "parse",
+            "python", "-m", "emllm.cli", "parse",
             "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
         ],
         capture_output=True,
@@ -36,7 +36,7 @@ def test_cli_generate(tmp_path):
     
     # Run the generate command
     result = subprocess.run(
-        ["python", "-m", "peml.cli", "generate", "--input", str(json_path)],
+        ["python", "-m", "emllm.cli", "generate", "--input", str(json_path)],
         capture_output=True,
         text=True
     )
@@ -50,7 +50,7 @@ def test_cli_generate(tmp_path):
 def test_cli_validate():
     result = subprocess.run(
         [
-            "python", "-m", "peml.cli", "validate",
+            "python", "-m", "emllm.cli", "validate",
             "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
         ],
         capture_output=True,
@@ -60,8 +60,8 @@ def test_cli_validate():
     assert "Message is valid!" in result.stdout
 
 def test_cli_convert(tmp_path):
-    # Create a test PEML file
-    peml_content = """
+    # Create a test emllm file
+    emllm_content = """
 From: test@example.com
 To: recipient@example.com
 Subject: Test
@@ -69,19 +69,19 @@ Subject: Test
 Hello World
 """
     
-    peml_path = tmp_path / "test.peml"
+    emllm_path = tmp_path / "test.emllm"
     json_path = tmp_path / "test.json"
     
-    with open(peml_path, "w") as f:
-        f.write(peml_content)
+    with open(emllm_path, "w") as f:
+        f.write(emllm_content)
     
-    # Convert PEML to JSON
+    # Convert emllm to JSON
     result = subprocess.run(
         [
-            "python", "-m", "peml.cli", "convert",
-            "--from", "peml",
+            "python", "-m", "emllm.cli", "convert",
+            "--from", "emllm",
             "--to", "json",
-            "--input", str(peml_path),
+            "--input", str(emllm_path),
             "--output", str(json_path)
         ],
         capture_output=True,

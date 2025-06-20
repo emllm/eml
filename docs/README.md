@@ -1,6 +1,6 @@
-# Python Email Message Language (PEML)
+# Python Email Message Language (emllm)
 
-PEML is a Python library for working with email messages. It provides a simple interface for parsing, validating, and generating email messages.
+emllm is a Python library for working with email messages. It provides a simple interface for parsing, validating, and generating email messages.
 
 ## Features
 
@@ -14,7 +14,7 @@ PEML is a Python library for working with email messages. It provides a simple i
 
 ## Installation
 
-You can install PEML using Poetry:
+You can install emllm using Poetry:
 
 ```bash
 poetry install
@@ -23,7 +23,7 @@ poetry install
 Or directly from PyPI:
 
 ```bash
-pip install peml
+pip install emllm
 ```
 
 ## Usage
@@ -32,16 +32,16 @@ pip install peml
 
 ```bash
 # Parse a message
-peml parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
+emllm parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
 
 # Generate a message from JSON
-peml generate --input message.json
+emllm generate --input message.json
 
 # Validate a message
-peml validate "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
+emllm validate "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
 
 # Convert between formats
-peml convert --from peml --to json --input message.peml --output message.json
+emllm convert --from emllm --to json --input message.emllm --output message.json
 ```
 
 ### REST API
@@ -49,25 +49,25 @@ peml convert --from peml --to json --input message.peml --output message.json
 Start the REST server:
 
 ```bash
-peml rest --host 0.0.0.0 --port 8000
+emllm rest --host 0.0.0.0 --port 8000
 ```
 
 Available endpoints:
 
-- POST `/parse`: Parse a PEML message
-- POST `/generate`: Generate a PEML message from structured data
-- POST `/validate`: Validate a PEML message
+- POST `/parse`: Parse a emllm message
+- POST `/generate`: Generate a emllm message from structured data
+- POST `/validate`: Validate a emllm message
 - POST `/convert`: Convert between formats
 - GET `/health`: Check server status
 
 ### Python API
 
 ```python
-from peml.core import PEMLParser
-from peml.validator import PEMLValidator
+from emllm.core import emllmParser
+from emllm.validator import emllmValidator
 
 # Parse a message
-parser = PEMLParser()
+parser = emllmParser()
 message = parser.parse("""
 From: test@example.com
 To: recipient@example.com
@@ -77,7 +77,7 @@ Hello World
 """)
 
 # Validate a message
-validator = PEMLValidator()
+validator = emllmValidator()
 validator.validate({
     'headers': {
         'From': 'test@example.com',
@@ -97,7 +97,7 @@ new_message = parser.from_dict(message_dict)
 
 ## Message Structure
 
-A valid PEML message must contain these required headers:
+A valid emllm message must contain these required headers:
 - From
 - To
 - Subject

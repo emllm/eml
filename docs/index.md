@@ -1,6 +1,6 @@
-# LLME (Large Language Model Email Message Language)
+# EMLLM (Email Message Language for LLM)
 
-LLME to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
+emllm to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
 
 ## 📚 Dokumentacja
 
@@ -40,8 +40,8 @@ LLME to zaawansowany system do dystrybucji oprogramowania generowanego przez AI,
 ## 📱 Kontakt
 
 - Email: info@softreck.dev
-- GitHub: [https://github.com/tomsapletta/llme](https://github.com/tomsapletta/llme)
+- GitHub: [https://github.com/emllm/eml](https://github.com/emllm/eml)
 
 ## 📄 Licencja
 
-LLME jest udostępniony pod licencją MIT. Szczegóły w pliku [LICENSE](../LICENSE).
+EMLLM jest udostępniony pod licencją Apache. Szczegóły w pliku [LICENSE](../LICENSE).

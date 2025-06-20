@@ -6,11 +6,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class PEMLValidator:
+class emllmValidator:
     REQUIRED_HEADERS = ['From', 'To', 'Subject']
     
     def validate(self, data: Dict[str, Any]) -> None:
-        """Validate PEML message data"""
+        """Validate emllm message data"""
         errors = []
         
         try:

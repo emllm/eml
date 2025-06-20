@@ -1,7 +1,7 @@
 import pytest
 import json
 from fastapi.testclient import TestClient
-from .api import app
+from emllm.api import app
 
 client = TestClient(app)
 
@@ -11,7 +11,7 @@ def test_health_check():
     assert response.json() == {"status": "healthy", "version": "0.1.0"}
 
 def test_parse_valid_message():
-    peml_content = """
+    emllm_content = """
 From: test@example.com
 To: recipient@example.com
 Subject: Test
@@ -21,7 +21,7 @@ Hello World
     
     response = client.post(
         "/parse",
-        json={"content": peml_content}
+        json={"content": emllm_content}
     )
     
     assert response.status_code == 200
@@ -91,8 +91,8 @@ def test_generate_invalid_message():
     assert response.status_code == 400
     assert "detail" in response.json()
 
-def test_convert_peml_to_json():
-    peml_content = """
+def test_convert_emllm_to_json():
+    emllm_content = """
 From: test@example.com
 To: recipient@example.com
 Subject: Test
@@ -103,10 +103,10 @@ Hello World
     response = client.post(
         "/convert",
         params={
-            "from_format": "peml",
+            "from_format": "emllm",
             "to_format": "json"
         },
-        json={"content": peml_content}
+        json={"content": emllm_content}
     )
     
     assert response.status_code == 200
@@ -118,7 +118,7 @@ Hello World
     assert data["headers"]["Subject"] == "Test"
     assert data["body"] == "Hello World"
 
-def test_convert_json_to_peml():
+def test_convert_json_to_emllm():
     json_content = {
         "headers": {
             "From": "test@example.com",
@@ -133,7 +133,7 @@ def test_convert_json_to_peml():
         "/convert",
         params={
             "from_format": "json",
-            "to_format": "peml"
+            "to_format": "emllm"
         },
         json={"content": json_content}
     )
