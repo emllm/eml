@@ -17,6 +17,7 @@ Ten plik jest jednocześnie:
 
 import sys
 import os
+import re
 import tempfile
 import webbrowser
 import subprocess
@@ -129,7 +130,7 @@ def extract_eml_content(script_path):
             # Try with triple quotes
             eml_content_start = content_str.find('"""\nMIME-Version: 1.0', eml_start)
             if eml_content_start != -1:
-                eml_content_start += 3  # Skip the triple quote and newline
+                eml_content_start += 5  # Skip the triple quote, newline, and newline before headers
         
         if eml_content_start == -1:
             raise ValueError("Nie udało się zlokalizować zawartości EML w pliku")
@@ -144,15 +145,16 @@ def extract_eml_content(script_path):
         
         if eml_end != -1:
             eml_content = eml_content[:eml_end].strip()
+            
+        # If we have triple quotes at the start, remove them
+        eml_content = eml_content.lstrip('"')
         
-        # Ensure we have a proper MIME-Version header at the start
-        if not eml_content.startswith('MIME-Version'):
-            mime_pos = eml_content.find('MIME-Version: 1.0')
-            if mime_pos != -1:
-                eml_content = eml_content[mime_pos:]
-            else:
-                # If we can't find MIME-Version, add a default header
-                eml_content = 'MIME-Version: 1.0\n' + eml_content
+        # Ensure we have proper line endings
+        eml_content = eml_content.replace('\r\n', '\n').replace('\r', '\n')
+        
+        # Ensure proper MIME headers
+        if not eml_content.startswith('MIME-Version: 1.0'):
+            eml_content = 'MIME-Version: 1.0\n' + eml_content
         
         # Save the EML content to a temporary file
         eml_file = os.path.join(temp_dir, 'extracted.eml')
@@ -174,12 +176,31 @@ def extract_eml_content(script_path):
             with open(eml_file, 'r', encoding='utf-8') as f:
                 content = f.read()
                 print(f"\nZawartość EML (pierwsze 500 znaków):\n{content[:500]}...")
+                
+                # If no files were extracted but we have HTML content, create an index.html
+                html_start = content.find('<!DOCTYPE html>')
+                if html_start == -1:
+                    html_start = content.find('<html')
+                    
+                if html_start != -1:
+                    index_path = os.path.join(temp_dir, 'index.html')
+                    with open(index_path, 'w', encoding='utf-8') as f_html:
+                        f_html.write(content[html_start:])
+                        
+                    extracted_files = [{
+                        'name': 'index.html',
+                        'path': index_path,
+                        'size': os.path.getsize(index_path),
+                        'content_type': 'text/html'
+                    }]
+                    print("✅ Wyodrębniono zawartość HTML do index.html")
         else:
             print(f"\n✅ Pomyślnie wyodrębniono {len(extracted_files)} plików:")
             for i, file_info in enumerate(extracted_files, 1):
                 print(f"{i}. {file_info['name']} ({file_info['size']} bytes, {file_info['content_type']})")
         
-        return eml_file, temp_dir
+        # Return the directory and the list of extracted files
+        return temp_dir, extracted_files
         
     except Exception as e:
         print(f" Błąd podczas wyodrębniania zawartości EML: {e}")
@@ -402,27 +423,60 @@ def action_browse(script_path):
     """Akcja: otwórz w przeglądarce"""
     print("🌐 Otwieranie w przeglądarce...")
 
+
     temp_dir, files = extract_eml_content(script_path)
 
-    # Znajdź index.html
+    # Try to find index.html first
     index_path = os.path.join(temp_dir, 'index.html')
+    
+    # If index.html doesn't exist, try to find HTML content in the extracted files
     if not os.path.exists(index_path):
-        print("❌ Brak index.html w EML")
-        return
+        print("ℹ️ Brak pliku index.html, szukam zawartości HTML w EML...")
+        
+        # Look for HTML files in the extracted files
+        html_files = [f for f in os.listdir(temp_dir) if f.endswith('.html')]
+        if html_files:
+            index_path = os.path.join(temp_dir, html_files[0])
+            print(f"✅ Znaleziono plik HTML: {os.path.basename(index_path)}")
+        else:
+            # If no HTML files found, try to find HTML content in the EML
+            eml_file = os.path.join(temp_dir, 'extracted.eml')
+            if os.path.exists(eml_file):
+                with open(eml_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    
+                # Look for HTML content in the EML
+                html_start = content.find('<!DOCTYPE html>')
+                if html_start == -1:
+                    html_start = content.find('<html')
+                    
+                if html_start != -1:
+                    # Create a temporary HTML file
+                    index_path = os.path.join(temp_dir, 'index.html')
+                    with open(index_path, 'w', encoding='utf-8') as f:
+                        f.write(content[html_start:])
+                    print("✅ Wyodrębniono zawartość HTML z EML")
+                else:
+                    print("❌ Nie znaleziono zawartości HTML w EML")
+                    return
+            else:
+                print("❌ Brak pliku EML do przetworzenia")
+                return
 
-    # Zamień referencje CID na lokalne pliki
+    # Process the HTML file
     try:
         with open(index_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
 
-        # Zastąp cid: referencje lokalnymi plikami
-        html_content = re.sub(r'src="cid:([^"]+)"', r'src="\1"', html_content)
-        html_content = re.sub(r'href="cid:([^"]+)"', r'href="\1"', html_content)
+        # Replace cid: references with local files
+        html_content = re.sub(r'src=["\']cid:([^"\']+)["\']', r'src="\1"', html_content)
+        html_content = re.sub(r'href=["\']cid:([^"\']+)["\']', r'href="\1"', html_content)
 
+        # Save the processed HTML
         with open(index_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
 
-        # Otwórz w przeglądarce
+        # Open in browser
         file_url = f"file://{index_path.replace(os.sep, '/')}"
         webbrowser.open(file_url)
 

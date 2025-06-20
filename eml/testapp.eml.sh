@@ -1,15 +1,82 @@
 #!/bin/bash
 #
-# Self-extracting EML script - faktury-maj.eml.sh
-# Użycie: ./faktury-maj.eml.sh [extract|run|browse|info]
+# Self-extracting EML script - testapp.eml.sh
+# Użycie: ./testapp.eml.sh [extract|run|browse|info]
 #
 # Ten plik jest jednocześnie:
 # 1. Wykonywalnym skryptem bash
 # 2. Płynym plikiem EML z załącznikami
 #
 
-# EML content starts here
-MIME-Version: 1.0
+# Znajdź i wykonaj tylko część bashową
+if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "info" ]; then
+    # Przetwarzanie argumentów
+    case "$1" in
+        extract)
+            echo "Wyodrębnianie zawartości..."
+            mkdir -p extracted_content
+            
+            # Wyodrębnij HTML
+            sed -n '/^<\!DOCTYPE html>/,/^<\/html>$/p' "$0" > extracted_content/index.html
+            
+            # Wyodrębnij CSS
+            if grep -q 'Content-Type: text/css' "$0"; then
+                echo "Znaleziono plik CSS, wyodrębniam..."
+                mkdir -p extracted_content/css
+                sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    sed '1d;$d' | base64 -d > extracted_content/css/style.css 2>/dev/null || \
+                    sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    sed '1d;$d' > extracted_content/css/style.css
+            fi
+            
+            # Wyodrębnij JS
+            if grep -q 'Content-Type: application/javascript' "$0"; then
+                echo "Znaleziono plik JavaScript, wyodrębniam..."
+                mkdir -p extracted_content/js
+                sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    sed '1d;$d' | base64 -d > extracted_content/js/app.js 2>/dev/null || \
+                    sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    sed '1d;$d' > extracted_content/js/app.js
+            fi
+            
+            # Skopiuj oryginalny plik EML
+            cp "$0" extracted_content/original.eml
+            
+            # Zaktualizuj ścieżki w pliku HTML
+            sed -i 's|href="cid:style_css"|href="css/style.css"|g' extracted_content/index.html
+            sed -i 's|src="cid:app_js"|src="js/app.js"|g' extracted_content/index.html
+            
+            echo "Zawartość wyodrębniona do katalogu extracted_content/"
+            ls -la extracted_content/
+            ;;
+        run)
+            echo "Uruchamianie aplikacji..."
+            # Najpierw wyodrębnij, jeśli to konieczne
+            if [ ! -d "extracted_content" ]; then
+                "$0" extract
+            fi
+            # Uruchom prosty serwer HTTP
+            echo "Aplikacja dostępna pod adresem: http://localhost:8000"
+            echo "Naciśnij Ctrl+C, aby zakończyć"
+            cd extracted_content && python3 -m http.server 8000
+            ;;
+        browse)
+            echo "Otwieranie w przeglądarce..."
+            xdg-open "http://localhost:8000" 2>/dev/null || open "http://localhost:8000" 2>/dev/null || echo "Nie udało się otworzyć przeglądarki"
+            ;;
+        info)
+            echo "Informacje o skrypcie:"
+            echo "- Nazwa: Faktury Maj 2025"
+            echo "- Typ: Aplikacja webowa"
+            echo "- Generator: EML-Script-Generator"
+            ;;
+    esac
+    exit 0
+fi
+
+# Poniższa część jest ignorowana przez basha, ale jest częścią wiadomości EML
+: '--EML_CONTENT_STARTS_HERE--
+MIME-Version: 1.0'
 Subject: WebApp - Faktury Maj 2025
 Content-Type: multipart/mixed; boundary="WEBAPP_BOUNDARY_12345"
 X-App-Type: docker-webapp

@@ -60,12 +60,12 @@ clean:
 # Build package
 .PHONY: build
 build:
+	$(POETRY) version patch
 	$(POETRY) build
 
 # Publish package to PyPI
 .PHONY: publish
-publish:
-	$(POETRY) build
+publish: build
 	$(POETRY) publish --no-interaction
 
 # Generate documentation

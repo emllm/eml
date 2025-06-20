@@ -1,26 +1,90 @@
 # EMLLM (Email Message Language for LLM)
 
-[![Documentation](https://img.shields.io/badge/docs-available-brightgreen)](docs/index.md)
-[![PyPI version](https://img.shields.io/pypi/v/emllm)](https://pypi.org/project/emllm/)
-[![License](https://img.shields.io/github/license/emllm/eml)](LICENSE)
+[![PyPI Version](https://img.shields.io/pypi/v/emllm.svg)](https://pypi.org/project/emllm/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/emllm.svg)](https://pypi.org/project/emllm/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Documentation Status](https://readthedocs.org/projects/emllm/badge/?version=latest)](https://emllm.readthedocs.io/)
+[![Tests](https://github.com/emllm/eml/actions/workflows/tests.yml/badge.svg)](https://github.com/emllm/eml/actions)
+[![Codecov](https://codecov.io/gh/emllm/eml/branch/main/graph/badge.svg)](https://codecov.io/gh/emllm/eml)
 
-emllm to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
+EMLLM is a powerful Python library for parsing, validating, and generating email messages with support for LLM integration. It provides a simple and intuitive API for working with email messages in various formats.
 
-## 📚 Dokumentacja
+## ✨ Features
 
-Pełna dokumentacja dostępna w katalogu [docs/](docs/):
+- Parse and validate email messages
+- Generate email messages programmatically
+- Support for MIME messages and attachments
+- Integration with Large Language Models
+- Command-line interface for easy usage
+- REST API for remote processing
+- Comprehensive test coverage
+- Type hints for better development experience
 
-- [Instalacja](docs/installation/index.md)
-- [Użycie](docs/usage/index.md)
-- [API](docs/api/index.md)
-- [Architektura](docs/architecture/index.md)
-- [Przykłady](docs/examples/index.md)
-- [FAQ](docs/faq/index.md)
+## 🚀 Quick Start
 
-## 🛠️ Instalacja
+### Installation
 
 ```bash
 pip install emllm
+```
+
+### Basic Usage
+
+```python
+from emllm import EMLLMParser
+
+# Initialize the parser
+parser = EMLLMParser()
+
+# Parse an email message
+message = """
+From: sender@example.com
+To: recipient@example.com
+Subject: Test Message
+
+Hello, this is a test message.
+"""
+
+parsed = parser.parse(message)
+print(parsed)
+
+## 📚 Documentation
+
+Full documentation is available at [emllm.readthedocs.io](https://emllm.readthedocs.io/).
+
+Key sections:
+- [Installation Guide](docs/installation/index.md)
+- [Usage Examples](docs/usage/index.md)
+- [API Reference](docs/api/index.md)
+- [Contributing](CONTRIBUTING.md)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on how to submit pull requests, report issues, or suggest new features.
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 📫 Contact
+
+For questions or support, please open an issue on [GitHub](https://github.com/emllm/eml/issues).
+
+---
+
+<p align="center">
+  Made with ❤️ by the EMLLM Team
+</p>
+
+EMLLM is an advanced system for AI-generated software distribution, using email infrastructure as a transport protocol. The system combines the capabilities of Large Language Models with traditional email infrastructure, enabling the automatic distribution of dynamically generated code/applications.
+
+## 🛠️ Installation
+
+```bash
+pip install emllm
+```
+
 - Trudność w code signing i verification
 - Podatność na email interception
 
@@ -43,7 +107,7 @@ pip install emllm
 
 ### **Architektura systemu**
 
-```
+```bash
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   User Request  │───▶│   LLM Generator │───▶│  SMTP Gateway   │
 │  (Webhook/API)  │    │   (Code Gen)    │    │   (Email Send)  │
@@ -282,7 +346,7 @@ emllm/
 
 ```
 universal-webapp/
-├── faktury-maj.eml.py          # Główny uniwersalny plik
+├── testapp.eml.py          # Główny uniwersalny plik
 ├── run-windows.bat             # Windows batch launcher  
 ├── run-macos.command           # macOS double-click launcher
 ├── run-linux.sh               # Linux shell launcher
@@ -306,8 +370,8 @@ echo ==========================================
 echo.
 
 REM Sprawdź czy istnieje plik główny
-if not exist "faktury-maj.eml.py" (
-    echo BLAD: Nie znaleziono pliku faktury-maj.eml.py
+if not exist "testapp.eml.py" (
+    echo BLAD: Nie znaleziono pliku testapp.eml.py
     echo Upewnij sie, ze plik znajduje sie w tym samym katalogu.
     pause
     exit /b 1
@@ -389,11 +453,11 @@ if not defined ACTION (
 )
 
 echo.
-echo Uruchamianie: %PYTHON_CMD% faktury-maj.eml.py %ACTION%
+echo Uruchamianie: %PYTHON_CMD% testapp.eml.py %ACTION%
 echo.
 
 REM Uruchom aplikację
-%PYTHON_CMD% faktury-maj.eml.py %ACTION%
+%PYTHON_CMD% testapp.eml.py %ACTION%
 
 if %errorlevel% neq 0 (
     echo.
@@ -426,8 +490,8 @@ echo "========================================"
 echo
 
 # Check if main file exists
-if [ ! -f "faktury-maj.eml.py" ]; then
-    echo "❌ Błąd: Nie znaleziono pliku faktury-maj.eml.py"
+if [ ! -f "testapp.eml.py" ]; then
+    echo "❌ Błąd: Nie znaleziono pliku testapp.eml.py"
     echo "Upewnij się, że plik znajduje się w tym samym katalogu."
     
     # Show in Finder
@@ -519,11 +583,11 @@ else
     esac
 fi
 
-echo "🚀 Uruchamianie: $PYTHON_CMD faktury-maj.eml.py $ACTION"
+echo "🚀 Uruchamianie: $PYTHON_CMD testapp.eml.py $ACTION"
 echo
 
 # Run the application
-$PYTHON_CMD faktury-maj.eml.py $ACTION
+$PYTHON_CMD testapp.eml.py $ACTION
 
 # Check exit status
 if [ $? -ne 0 ]; then
@@ -561,8 +625,8 @@ echo
 cd "$(dirname "$0")"
 
 # Check if main file exists
-if [ ! -f "faktury-maj.eml.py" ]; then
-    echo "❌ Błąd: Nie znaleziono pliku faktury-maj.eml.py"
+if [ ! -f "testapp.eml.py" ]; then
+    echo "❌ Błąd: Nie znaleziono pliku testapp.eml.py"
     echo "Upewnij się, że plik znajduje się w tym samym katalogu."
     exit 1
 fi
@@ -661,11 +725,11 @@ case $choice in
 esac
 
 echo
-echo "🚀 Uruchamianie: $PYTHON_CMD faktury-maj.eml.py $ACTION"
+echo "🚀 Uruchamianie: $PYTHON_CMD testapp.eml.py $ACTION"
 echo
 
 # Run the application
-$PYTHON_CMD faktury-maj.eml.py $ACTION
+$PYTHON_CMD testapp.eml.py $ACTION
 
 # Check exit status
 if [ $? -ne 0 ]; then
@@ -807,7 +871,7 @@ sudo usermod -aG docker $USER
 
 ### "Permission denied" na Linux/macOS
 ```bash
-chmod +x faktury-maj.eml.py
+chmod +x testapp.eml.py
 chmod +x run-linux.sh      # Linux
 chmod +x run-macos.command # macOS
 ```
@@ -815,7 +879,7 @@ chmod +x run-macos.command # macOS
 ### Python 2 zamiast Python 3
 ```bash
 # Użyj explicit python3
-python3 faktury-maj.eml.py browse
+python3 testapp.eml.py browse
 ```
 
 ### Brak uprawnień Docker na Linux
@@ -855,21 +919,21 @@ Kliknij dwukrotnie: run-macos.command
 
 ```bash
 # Wszystkie platformy
-python3 faktury-maj.eml.py [komenda]
+python3 testapp.eml.py [komenda]
 
 # Windows (alternatywnie)
-python faktury-maj.eml.py [komenda]
+python testapp.eml.py [komenda]
 ```
 
 ## 📋 Dostępne komendy
 
 | Komenda | Opis | Przykład |
 |---------|------|----------|
-| `browse` | Otwórz w przeglądarce (domyślnie) | `python3 faktury-maj.eml.py browse` |
-| `run` | Uruchom w Docker na porcie 8080 | `python3 faktury-maj.eml.py run` |
-| `extract` | Wyodrębnij pliki do katalogu temp | `python3 faktury-maj.eml.py extract` |
-| `info` | Pokaż informacje o pliku | `python3 faktury-maj.eml.py info` |
-| `help` | Wyświetl pomoc | `python3 faktury-maj.eml.py help` |
+| `browse` | Otwórz w przeglądarce (domyślnie) | `python3 testapp.eml.py browse` |
+| `run` | Uruchom w Docker na porcie 8080 | `python3 testapp.eml.py run` |
+| `extract` | Wyodrębnij pliki do katalogu temp | `python3 testapp.eml.py extract` |
+| `info` | Pokaż informacje o pliku | `python3 testapp.eml.py info` |
+| `help` | Wyświetl pomoc | `python3 testapp.eml.py help` |
 
 ## 🛠️ Instalacja
 
@@ -906,6 +970,10 @@ poetry install
 
 Jeśli Python nie jest zainstalowany, zobacz: [install-python.md](install-python.md)
 
+## 📝 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
 ## 📧 Format EML
 
 Ten plik jest **jednocześnie**:
@@ -935,7 +1003,7 @@ Możesz go:
 Jeśli masz Docker, możesz uruchomić aplikację w kontenerze:
 
 ```bash
-python3 faktury-maj.eml.py run
+python3 testapp.eml.py run
 ```
 
 Aplikacja będzie dostępna na: http://localhost:8080
@@ -975,7 +1043,7 @@ Dashboard zawiera:
 
 ### Struktura pliku
 ```
-faktury-maj.eml.py
+testapp.eml.py
 ├── Python script (wykonywalna część)
 ├── EML headers (MIME metadata)
 ├── HTML (index.html)
@@ -1015,7 +1083,7 @@ Możesz go swobodnie używać, modyfikować i dystrybuować.
 
 Stworzyłem **kompletne uniwersalne rozwiązanie** składające się z:
 
-### 1. **Główny plik** - `faktury-maj.eml.py`
+### 1. **Główny plik** - `testapp.eml.py`
 - Działa na **wszystkich platformach** (Windows, macOS, Linux)
 - **Python 3.6+** jako wspólny mianownik
 - **Automatyczne wykrywanie platformy**
@@ -1034,7 +1102,7 @@ Stworzyłem **kompletne uniwersalne rozwiązanie** składające się z:
 
 ### 🌟 **Kluczowe zalety:**
 
-✅ **Jedna komenda** - `python3 faktury-maj.eml.py`  
+✅ **Jedna komenda** - `python3 testapp.eml.py`  
 ✅ **Zero instalacji** - tylko Python (standardowo dostępny)  
 ✅ **Inteligentne wykrywanie** - platformy, Python, Docker  
 ✅ **Graceful degradation** - zawsze znajdzie sposób działania  
