@@ -34,16 +34,14 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     sed '1d;$d' > extracted_content/css/style.css
             fi
             
-            # Wyodrębnij JS
+            # Extract JavaScript
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
                 mkdir -p extracted_content/js
-                # Znajdź pozycję początku i końca sekcji JavaScript
-                JS_START=$(grep -n 'Content-Type: application/javascript' "$0" | head -1 | cut -d: -f1)
-                JS_END=$(tail -n +"$JS_START" "$0" | grep -n -m 1 '^--WEBAPP_BOUNDARY_' | cut -d: -f1)
-                JS_END=$((JS_START + JS_END - 1))
-                # Wyodrębnij tylko kod JavaScript, pomiń 3 pierwsze linie (nagłówki)
-                tail -n +"$((JS_START + 3))" "$0" | head -n "$((JS_END - JS_START - 4))" > extracted_content/js/app.js
+                # Extract JavaScript content between boundaries
+                sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    grep -v '^Content-' | \
+                    sed '/^--/d' > extracted_content/js/app.js
             fi
             
             # Wyodrębnij favicon
@@ -57,8 +55,21 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     grep -v '^Content-' > extracted_content/images/favicon.svg
             fi
             
-            # Utwórz plik original.eml z prawidłowymi nagłówkami wiadomości
-            cat > extracted_content/original.eml << 'EOL'
+            # Create a temporary directory for CID version
+            mkdir -p extracted_content/cid_version
+            
+            # Create the HTML with CID references
+            echo "Tworzenie wersji HTML z referencjami CID..."
+            cat extracted_content/index.html | \
+                sed 's|href="css/style.css"|href="cid:style_css"|g' | \
+                sed 's|src="js/app.js"|src="cid:script_js"|g' | \
+                sed 's|href="images/favicon.svg"|href="cid:favicon_svg"|g' > extracted_content/cid_version/index.html
+            
+            # Create a temporary file for the EML content
+            TMP_EML=$(mktemp)
+            
+            # Write headers to the temporary file
+            cat > "$TMP_EML" <<- EOM
 MIME-Version: 1.0
 From: system@example.com
 To: recipient@example.com
@@ -69,83 +80,83 @@ X-Generator: EML-Script-Generator
 Content-Type: multipart/mixed; boundary="WEBAPP_BOUNDARY_12345"
 
 --WEBAPP_BOUNDARY_12345
+Content-Type: multipart/related; boundary="RELATED_BOUNDARY_12345"
+
+--RELATED_BOUNDARY_12345
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Content-Disposition: inline
+Content-ID: <main_html>
 
-EOL
+EOM
 
-            # Dodaj zawartość HTML z oryginalnymi referencjami CID
-            cat extracted_content/original_index.html | sed 's|href="css/style.css"|href="cid:style_css"|g' | \
-                sed 's|src="js/app.js"|src="cid:script_js"|g' >> extracted_content/original.eml
+            # Add HTML content
+            cat extracted_content/cid_version/index.html >> "$TMP_EML"
             
-            # Dodaj pozostałe części MIME
-            echo "" >> extracted_content/original.eml
+            # Add CSS part
+            cat >> "$TMP_EML" <<- EOM
+
+--RELATED_BOUNDARY_12345
+Content-Type: text/css; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Content-ID: <style_css>
+Content-Disposition: inline; filename="style.css"
+
+EOM
+            # Add CSS content
+            cat extracted_content/css/style.css >> "$TMP_EML"
             
-            # Dodaj CSS
-            echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
-            echo "Content-Type: text/css; charset=utf-8" >> extracted_content/original.eml
-            echo "Content-Transfer-Encoding: quoted-printable" >> extracted_content/original.eml
-            echo "Content-ID: <style_css>" >> extracted_content/original.eml
-            echo "Content-Disposition: inline; filename=\"style.css\"" >> extracted_content/original.eml
-            echo "" >> extracted_content/original.eml
-            cat extracted_content/css/style.css >> extracted_content/original.eml
-            
-            # Dodaj JS
-            echo "" >> extracted_content/original.eml
-            echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
-            echo "Content-Type: application/javascript; charset=utf-8" >> extracted_content/original.eml
-            echo "Content-Transfer-Encoding: quoted-printable" >> extracted_content/original.eml
-            echo "Content-ID: <script_js>" >> extracted_content/original.eml
-            echo "Content-Disposition: inline; filename=\"app.js\"" >> extracted_content/original.eml
-            echo "" >> extracted_content/original.eml
-            cat extracted_content/js/app.js >> extracted_content/original.eml
-            
-            # Dodaj favicon
-            if [ -f "extracted_content/images/favicon.svg" ]; then
-                echo "" >> extracted_content/original.eml
-                echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
-                echo "Content-Type: image/svg+xml; charset=utf-8" >> extracted_content/original.eml
-                echo "Content-Transfer-Encoding: base64" >> extracted_content/original.eml
-                echo "Content-ID: <favicon_svg>" >> extracted_content/original.eml
-                echo "Content-Disposition: inline; filename=\"favicon.svg\"" >> extracted_content/original.eml
-                echo "" >> extracted_content/original.eml
-                base64 < extracted_content/images/favicon.svg >> extracted_content/original.eml
+            # Add JavaScript part
+            cat >> "$TMP_EML" <<- EOM
+
+--RELATED_BOUNDARY_12345
+Content-Type: application/javascript; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Content-ID: <script_js>
+Content-Disposition: inline; filename="app.js"
+
+EOM
+            # Add JavaScript content from the extracted file
+            if [ -f "extracted_content/js/app.js" ]; then
+                cat extracted_content/js/app.js >> "$TMP_EML"
             fi
             
-            # Zakończ wiadomość
-            echo "" >> extracted_content/original.eml
-            echo "--WEBAPP_BOUNDARY_12345--" >> extracted_content/original.eml
+            # Add favicon if exists
+            if [ -f "extracted_content/images/favicon.svg" ]; then
+                cat >> "$TMP_EML" <<- EOM
+
+--RELATED_BOUNDARY_12345
+Content-Type: image/svg+xml; charset=utf-8
+Content-Transfer-Encoding: base64
+Content-ID: <favicon_svg>
+Content-Disposition: inline; filename="favicon.svg"
+
+EOM
+                base64 < extracted_content/images/favicon.svg >> "$TMP_EML"
+            fi
             
-            # Zapisz oryginalną zawartość HTML
+            # Close boundaries
+            echo -e "\n--RELATED_BOUNDARY_12345--" >> "$TMP_EML"
+            echo -e "\n--WEBAPP_BOUNDARY_12345--" >> "$TMP_EML"
+            
+            # Move the temporary file to the final location
+            mv "$TMP_EML" extracted_content/original.eml
+            # Update the HTML file with correct paths for local serving
             HTML_CONTENT=$(cat extracted_content/index.html)
             
-            # Zaktualizuj ścieżki w HTML
+            # Update paths in HTML
             UPDATED_HTML=$(echo "$HTML_CONTENT" | \
                 sed 's|href="cid:style_css"|href="css/style.css"|g' | \
-                sed 's|src="cid:script_js"|src="js/app.js"|g')
+                sed 's|src="cid:script_js"|src="js/app.js"|g' | \
+                sed 's|href="cid:favicon_svg"|href="images/favicon.svg"|g')
             
-            # Dodaj link do favicon, jeśli nie istnieje
+            # Add favicon link if it doesn't exist
             if ! echo "$UPDATED_HTML" | grep -q 'link.*favicon'; then
                 UPDATED_HTML=$(echo "$UPDATED_HTML" | \
                     sed '/<head>/a \    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">')
             fi
             
-            # Zapisz zaktualizowany HTML
+            # Save the updated HTML
             echo "$UPDATED_HTML" > extracted_content/index.html
-            
-            # Przygotuj oryginalną wersję HTML dla pliku EML
-            ORIGINAL_HTML=$(echo "$UPDATED_HTML" | \
-                sed 's|href="css/style.css"|href="cid:style_css"|g' | \
-                sed 's|src="js/app.js"|src="cid:script_js"|g')
-            
-            # Zaktualizuj oryginalny plik EML z oryginalnymi ścieżkami
-            awk -v html="$ORIGINAL_HTML" '{
-                if ($0 ~ /^<!DOCTYPE html>/) { in_html=1; print html; next }
-                if (in_html && $0 ~ /<\/html>/) { in_html=0; next }
-                if (!in_html) print $0
-            }' extracted_content/original.eml > extracted_content/original.eml.tmp && \
-            mv extracted_content/original.eml.tmp extracted_content/original.eml
             
             echo "Zawartość wyodrębniona do katalogu extracted_content/"
             ls -la extracted_content/
