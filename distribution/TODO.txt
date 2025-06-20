@@ -4,8 +4,8 @@ stworz docker + groovy + apache camel z osblugą pipeline dla procesowania danyc
 kazda wiaodmosc ma byc odczytywana  i procesowana przez LLM i odpisywana wiadomossc z LLM jako multipart aplikacja w postaci eml do uruchomienia po stronie klienta
 zrob automatyczny deployment tej wiadomosci zaraz jak przyjdzie do usera poprzez specjalny klient  z docker + groovy + apache camel do odbierania wiadomosci i deploymentu
 
-dodaj BOT generator aplikacji co 1 minute wysyłaj losową wiadomość EMAIL z posrod 3 zdan: zadan co ma byc za aplikacja wygenerowaana 
-dodaj auto deployer,  po stronie klienta, ktory ma otrzymac wygenerowa aplikacje w postaci eml wiadomosci i ją deployować na maszynie lokalnej 
+dodaj BOT generator aplikacji co 1 minute wysyłaj losową wiadomość EMAIL z posrod 3 zdan: zadan co ma byc za aplikacja wygenerowaana
+dodaj auto deployer,  po stronie klienta, ktory ma otrzymac wygenerowa aplikacje w postaci eml wiadomosci i ją deployować na maszynie lokalnej
 
 
 lub plik html, gdzie pobiera wiadomosc i przetwarza
@@ -943,30 +943,5 @@ class ClientEmailRoute extends RouteBuilder {
 ```yaml
 version: "3.8"
 
-services:
-  camel-server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    volumes:
-      - ./server/private.pem:/app/private.pem
-      - ./server/public.pem:/app/public.pem
-      - ./server/generated:/app/generated
-    environment:
-      - SMTP_USER=user
-      - SMTP_PASS=pass
-    ports:
-      - "8080:8080"
 
-  client-agent:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    volumes:
-      - ./client/public.pem:/client/public.pem
-      - ./client/download:/client/download
-      - ./client/deploy:/client/deploy
-    environment:
-      - IMAP_USER=client@domain.com
-      - IMAP_PASS=pass
 ```

@@ -1,73 +1,94 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-testapp.eml.py
-Universal Self-extracting EML WebApp Script
+EML WebApp - Universal Web Application Packager
 
-Działa na: Windows, macOS, Linux
-Wymagania: Python 3.6+ (standardowo dostępny)
-Użycie: python testapp.eml.py [extract|run|browse|info]
-        lub ./testapp.eml.py [extract|run|browse|info] (Linux/macOS)
-        lub po prostu kliknij dwukrotnie na Windows
-
-Ten plik jest jednocześnie:
-1. Wykonywalnym skryptem Python
-2. Prawidłowym plikiem EML z załącznikami
+This script allows packaging web applications into a single EML file
+that can be executed on any platform with Python 3.6+ or Docker.
 """
 
-import sys
+import email
+import email.policy
+import json
+import mimetypes
 import os
 import re
-import tempfile
-import webbrowser
-import subprocess
-import email
-import mimetypes
 import shutil
-import platform
+import subprocess
+import sys
+import webbrowser
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
-# Uniwersalne funkcje pomocnicze
-def get_platform():
-    """Wykryj platformę systemową"""
-    system = platform.system().lower()
+# Add support for more MIME types
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('image/svg+xml', '.svg')
+mimetypes.add_type('font/woff2', '.woff2')
+mimetypes.add_type('font/woff', '.woff')
+mimetypes.add_type('font/ttf', '.ttf')
+mimetypes.add_type('font/eot', '.eot')
+
+# Constants
+DEFAULT_PORT = 8080
+TEMP_PREFIX = 'webapp_'
+EML_BOUNDARY = 'UNIVERSAL_WEBAPP_BOUNDARY'
+
+def get_platform() -> str:
+    """Detect the current platform.
+    
+    Returns:
+        str: The detected platform ('windows', 'macos', or 'linux').
+    """
+    system = sys.platform.lower()
     if system == 'darwin':
         return 'macos'
-    elif system == 'windows':
+    if system == 'win32':
         return 'windows'
-    else:
-        return 'linux'
+    return 'linux'
 
-
-def show_notification(title, message):
-    """Pokaż powiadomienie systemowe (cross-platform)"""
+def show_notification(title: str, message: str) -> None:
+    """Display a system notification.
+    
+    Args:
+        title: The title of the notification.
+        message: The message content of the notification.
+    """
     try:
         system = get_platform()
         if system == 'windows':
-            # Windows toast notification
-            subprocess.run([
-                'powershell', '-Command',
-                f'Add-Type -AssemblyName System.Windows.Forms; '
-                f'[System.Windows.Forms.MessageBox]::Show("{message}", "{title}")'
-            ], check=False, capture_output=True)
+            subprocess.run(
+                [
+                    'powershell',
+                    '-NoProfile',
+                    '-ExecutionPolicy', 'Bypass',
+                    '-Command',
+                    f'[System.Windows.Forms.MessageBox]::Show(\"{message}\", \"{title}\")'
+                ],
+                check=False,
+                capture_output=True
+            )
         elif system == 'macos':
-            # macOS notification
-            subprocess.run([
-                'osascript', '-e',
-                f'display notification "{message}" with title "{title}"'
-            ], check=False, capture_output=True)
+            subprocess.run(
+                ['osascript', '-e', f'display notification "{message}" with title "{title}"'],
+                check=False,
+                capture_output=True
+            )
         else:
-            # Linux notification (notify-send lub fallback)
+            # Linux notification (notify-send or fallback)
             try:
-                subprocess.run(['notify-send', title, message], check=False, capture_output=True)
-            except:
-                print(f"📱 {title}: {message}")
-    except:
-        print(f"📱 {title}: {message}")
+                subprocess.run(
+                    ['notify-send', title, message],
+                    check=False,
+                    capture_output=True
+                )
+            except (OSError, subprocess.SubprocessError) as e:
+                print(f"{title}: {message}")
+    except Exception as e:
+        print(f"{title}: {message}")
 
-
-def open_file_browser(path):
-    """Otwórz plik w eksploratorze (cross-platform)"""
+def open_file_browser(path: str) -> None:
+    """Open a file in the file browser"""
     try:
         system = get_platform()
         if system == 'windows':
@@ -77,169 +98,142 @@ def open_file_browser(path):
         else:
             subprocess.run(['xdg-open', path], check=False)
     except:
-        print(f"📁 Otwórz: {path}")
+        print(f" Otwórz: {path}")
 
-
-def check_docker():
-    """Sprawdź czy Docker jest dostępny"""
+def check_docker() -> bool:
+    """Check if Docker is available on the system.
+    
+    Returns:
+        bool: True if Docker is available, False otherwise.
+    """
     try:
-        import platform
-        result = subprocess.run(['docker', '--version'],
-                                capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            ['docker', '--version'],
+            capture_output=True,
+            text=True,
+            check=False
+        )
         return result.returncode == 0
-    except:
+    except (OSError, subprocess.SubprocessError):
         return False
 
-
-def extract_eml_content(script_path):
-    """
-    Wyodrębnij zawartość EML z pliku skryptu
+def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], List[str]]:
+    """Extract EML content from the script file.
     
     Args:
-        script_path (str): Ścieżka do pliku skryptu .py lub .eml
+        script_path: Path to the script file containing EML content.
         
     Returns:
-        tuple: (ścieżka_do_pliku_eml, katalog_z_plikami)
+        A tuple containing:
+            - The EML content as a string (or None if not found)
+            - A list of extracted files (always empty in this implementation)
     """
-    temp_dir = tempfile.mkdtemp(prefix='webapp_')
-    extracted_files = []
-
     try:
-        print("\u2709 Wyszukiwanie zawartości EML w pliku...")
-        
-        # Read the input file as binary to preserve all content
-        with open(script_path, 'rb') as f:
+        with open(script_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
         
-        # Look for the EML content marker
-        eml_marker = b'# ===================================================================='
-        eml_start = content.find(eml_marker)
-        
+        # Look for the EML content between triple quotes
+        eml_start = content.find('eml_content = """')
         if eml_start == -1:
-            raise ValueError("Nie znaleziono znacznika początku zawartości EML w pliku")
-        
-        # Find the start of the EML content (after the marker and any whitespace)
-        eml_content_start = content.find(b'MIME-Version: 1.0', eml_start)
-        if eml_content_start == -1:
-            # Try with triple quotes
-            eml_content_start = content.find(b'"""\nMIME-Version: 1.0', eml_start)
-            if eml_content_start != -1:
-                eml_content_start += 5  # Skip the triple quote, newline, and newline before headers
-        
-        if eml_content_start == -1:
-            raise ValueError("Nie udało się zlokalizować zawartości EML w pliku")
-        
-        # Extract the EML content as bytes
-        eml_content = content[eml_content_start:]
-        
-        # Look for the end of the EML content (before the closing triple quotes or boundary)
-        eml_end = eml_content.rfind(b'--UNIVERSAL_WEBAPP_BOUNDARY--')
-        if eml_end == -1:
-            eml_end = eml_content.rfind(b'"""')
-        
-        if eml_end != -1:
-            eml_content = eml_content[:eml_end].strip()
-        
-        # Ensure proper MIME headers if needed
-        if not eml_content.startswith(b'MIME-Version: 1.0'):
-            eml_content = b'MIME-Version: 1.0\n' + eml_content
-        
-        # Save the EML content to a temporary file as binary
-        eml_file = os.path.join(temp_dir, 'original.eml')
-        with open(eml_file, 'wb') as f:
-            f.write(eml_content)
-        
-        print(f"✅ Zapisano EML do: {eml_file}")
-        
-        # Now extract the files from the EML
-        extracted_files = extract_from_eml(eml_file, temp_dir)
-        
-        # Verify extraction
-        if not extracted_files:
-            print("⚠ Nie wyodrębniono żadnych plików z EML!")
-            
-            # Try to parse the EML file directly
-            try:
-                with open(eml_file, 'rb') as f:
-                    msg = email.message_from_binary_file(f)
-                
-                if msg.is_multipart():
-                    print(f"Znaleziono wieloczęściową wiadomość ({msg.get_content_type()})")
-                    for part in msg.walk():
-                        content_type = part.get_content_type()
-                        print(f"- {content_type}")
-            except Exception as e:
-                print(f"Błąd podczas analizy EML: {e}")
+            eml_start = content.find("eml_content = '''")
+            if eml_start == -1:
+                # Try to find the EML content directly
+                eml_start = content.find('From ')
+                if eml_start == -1:
+                    return None, []
+                eml_end = content.find(f'\n--{EML_BOUNDARY}--')
+                if eml_end == -1:
+                    return None, []
+                eml_end = content.find('\n', eml_end) + 1
+                return content[eml_start:eml_end], []
+            eml_start += len("eml_content = '''")
+            eml_end = content.find("'''", eml_start)
         else:
-            print(f"\n✅ Pomyślnie wyodrębniono {len(extracted_files)} plików:")
-            for i, file_info in enumerate(extracted_files, 1):
-                print(f"{i}. {file_info['name']} ({file_info['size']} bytes, {file_info['content_type']})")
+            eml_start += len('eml_content = """')
+            eml_end = content.find('"""', eml_start)
         
-        # Create a copy of the EML file in the extracted directory
-        shutil.copy2(eml_file, os.path.join(temp_dir, 'extracted.eml'))
+        if eml_end == -1:
+            return None, []
         
-        # Return the directory and the list of extracted files
-        return temp_dir, extracted_files
-        
+        return content[eml_start:eml_end], []
+    except (IOError, OSError) as e:
+        print(f"Error reading script file: {e}")
+        return None, []
     except Exception as e:
-        print(f"Błąd podczas wyodrębniania zawartości EML: {e}")
-        import traceback
-        traceback.print_exc()
-        raise
+        print(f"Unexpected error extracting EML content: {e}")
+        return None, []
 
-def update_html_references(html_path):
-    """
-    Update HTML file to use flat file references
+def update_html_references(html_path: str, cid_map: Dict[str, str]) -> None:
+    """Update HTML file to use relative paths for resources (flat structure)
     
     Args:
-        html_path (str): Path to the HTML file to update
+        html_path: Path to the HTML file to update
+        cid_map: Map of CID to filename
     """
     try:
         with open(html_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Update CSS and JS paths to use flat filenames
-        content = re.sub(r'href=["\'](?:[^/]+/)*([^/"\']+\.css)["\']', r'href="\1"', content, flags=re.IGNORECASE)
-        content = re.sub(r'src=["\'](?:[^/]+/)*([^/"\']+\.js)["\']', r'src="\1"', content, flags=re.IGNORECASE)
-        content = re.sub(r'src=["\'](?:[^/]+/)*([^/"\']+\.(?:png|jpg|jpeg|gif|svg|ico))["\']', r'src="\1"', content, flags=re.IGNORECASE)
+        # Update CSS and JS paths to use filenames directly (no subdirectories)
+        content = re.sub(
+            r'href=["\'](?:[^/]+/)*([^/"\']+\.css)["\']', 
+            r'href="\1"', 
+            content, 
+            flags=re.IGNORECASE
+        )
+        content = re.sub(
+            r'src=["\'](?:[^/]+/)*([^/"\']+\.js)["\']', 
+            r'src="\1"', 
+            content, 
+            flags=re.IGNORECASE
+        )
+        content = re.sub(
+            r'src=["\'](?:[^/]+/)*([^/"\']+\.(?:png|jpg|jpeg|gif|svg|ico))["\']', 
+            r'src="\1"', 
+            content, 
+            flags=re.IGNORECASE
+        )
         
-        # Handle inline styles with url()
-        content = re.sub(r'url\(["\']?(?:[^/]+/)*([^/"\')]+\.(?:png|jpg|jpeg|gif|svg|ico))["\']?\)', 
-                        r'url("\1")', content, flags=re.IGNORECASE)
+        # Handle inline styles with url() references
+        content = re.sub(
+            r'url\(["\']?(?:[^/]+/)*([^/"\')]+\.(?:png|jpg|jpeg|gif|svg|ico))["\']?\)',
+            r'url("\1")', 
+            content, 
+            flags=re.IGNORECASE
+        )
+        
+        # Replace CID references with actual filenames
+        for cid, filename in cid_map.items():
+            # Handle both cid: and <cid> formats
+            content = content.replace(f'cid:{cid}', filename)
+            content = content.replace(f'<{cid}>', filename)
         
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(content)
-            
+                
     except Exception as e:
-        print(f"⚠ Warning: Could not update HTML references in {html_path}: {e}")
+        print(f" Warning: Could not update HTML references in {html_path}: {e}")
 
-def extract_from_eml(eml_file, output_dir):
-    """
-    Extract files from an EML file to a flat directory structure
+def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
+    """Extract files from an EML file with support for multipart/related and CID references.
     
     Args:
-        eml_file (str): Path to the EML file to extract from
-        output_dir (str): Directory to extract files to (will be created if it doesn't exist)
+        eml_file: Path to the EML file
+        output_dir: Directory to extract files to
         
     Returns:
-        list: List of dictionaries containing information about extracted files
+        List of dictionaries with file information
     """
     extracted_files = []
-    html_files = []
+    cid_map = {}
     
     try:
-        print(f"\n🔍 Analyzing EML file: {eml_file}")
+        print(f"\n Analyzing EML file: {eml_file}")
         
-        # First try to parse the EML file as text
-        with open(eml_file, 'r', encoding='utf-8') as f:
-            msg = email.message_from_file(f)
+        # First try to parse the EML file as binary
+        with open(eml_file, 'rb') as f:
+            msg = email.message_from_binary_file(f, policy=email.policy.default)
             
-        # If parsing fails, try reading as bytes
-        if not msg:
-            print("⚠ Could not parse as text, trying as binary...")
-            with open(eml_file, 'rb') as f:
-                msg = email.message_from_binary_file(f)
-        
         if not msg:
             raise ValueError("Failed to parse EML file")
             
@@ -250,17 +244,8 @@ def extract_from_eml(eml_file, output_dir):
         
         # Process all parts of the message
         for part in msg.walk():
-            # Skip multipart container parts
-            if part.get_content_maintype() == 'multipart':
-                continue
-                
-            content_type = part.get_content_type()
-            content_disposition = part.get("Content-Disposition", "")
-            content_id = part.get("Content-ID", "").strip("<>")
-            
             try:
                 content_type = part.get_content_type()
-                content_disposition = part.get("Content-Disposition", "")
                 content_id = part.get("Content-ID", "").strip("<>")
                 
                 # Skip multipart container parts (we'll process their children)
@@ -273,18 +258,25 @@ def extract_from_eml(eml_file, output_dir):
                     filename = f"{content_id}"
                     # Add appropriate extension based on content type
                     ext = mimetypes.guess_extension(part.get_content_type())
-                    if ext:
+                    if ext and not filename.endswith(ext):
                         filename += ext
                 
                 # If still no filename, generate one
                 if not filename:
                     ext = (mimetypes.guess_extension(part.get_content_type()) 
                            or '.bin')
-                    filename = f'file_{len(extracted_files)}{ext}'
+                    filename = f"file_{len(extracted_files)}{ext}"
                 
                 # Clean filename and ensure it's safe
                 filename = os.path.basename(filename)
                 filename = re.sub(r'[^\w\-_. ]', '_', filename)
+                
+                # Ensure filename is unique
+                base_name, ext = os.path.splitext(filename)
+                counter = 1
+                while os.path.exists(os.path.join(output_dir, filename)):
+                    filename = f"{base_name}_{counter}{ext}"
+                    counter += 1
                 
                 # Map CID to filename for later reference
                 if content_id and content_id not in cid_map:
@@ -307,7 +299,7 @@ def extract_from_eml(eml_file, output_dir):
                         'name': filename,
                         'path': file_path,
                         'size': os.path.getsize(file_path),
-                        'content_type': part.get_content_type(),
+                        'content_type': content_type,
                         'content_id': content_id
                     }
                     extracted_files.append(file_info)
@@ -331,95 +323,10 @@ def extract_from_eml(eml_file, output_dir):
         traceback.print_exc()
         return []
 
-
-def action_extract(script_path):
-    """Akcja: wyodrębnij pliki"""
-    print("🔄 Wyodrębnianie plików z EML...")
-
-    temp_dir, files = extract_eml_content(script_path)
-
-    print(f"\n📁 Wyodrębniono {len(files)} plików do: {temp_dir}")
-
-    # Pokaż powiadomienie
-    show_notification("EML WebApp", f"Wyodrębniono {len(files)} plików")
-
-    return temp_dir
-
-
-def action_run(script_path):
-    """Akcja: uruchom w Docker"""
-    print("🐳 Uruchamianie jako kontener Docker...")
-
-    if not check_docker():
-        print("❌ Docker nie jest dostępny!")
-        print("Zainstaluj Docker Desktop:")
-        print("  Windows/macOS: https://www.docker.com/products/docker-desktop")
-        print("  Linux: sudo apt install docker.io")
-        return
-
-    eml_file, temp_dir = extract_eml_content(script_path)
+def action_browse(script_path: str) -> None:
+    """Action: Open in browser"""
+    print(" Opening in browser...")
     
-    # Look for Dockerfile in the extracted files
-    dockerfile_path = None
-    for root, _, files in os.walk(temp_dir):
-        if 'Dockerfile' in files:
-            dockerfile_path = os.path.join(root, 'Dockerfile')
-            break
-    
-    if not dockerfile_path or not os.path.exists(dockerfile_path):
-        print("❌ Brak Dockerfile w wyodrębnionych plikach")
-        print(f"Przeszukiwano w: {temp_dir}")
-        print(f"Zawartość katalogu: {os.listdir(temp_dir)}")
-        return
-
-    # Buduj obraz Docker
-    script_name = Path(script_path).stem
-    image_name = f"webapp-{script_name}"
-
-    print(f"🔨 Budowanie obrazu Docker: {image_name}")
-
-    try:
-        # Przejdź do katalogu tymczasowego
-        original_dir = os.getcwd()
-        os.chdir(temp_dir)
-
-        # Buduj obraz
-        build_result = subprocess.run([
-            'docker', 'build', '-t', image_name, '.'
-        ], capture_output=True, text=True)
-
-        if build_result.returncode != 0:
-            print(f"❌ Błąd budowania: {build_result.stderr}")
-            return
-
-        print("🚀 Uruchamianie kontenera na http://localhost:8080")
-        show_notification("Docker WebApp", "Kontener uruchomiony na porcie 8080")
-
-        # Otwórz przeglądarkę po chwili
-        import threading
-        def open_browser():
-            import time
-            time.sleep(3)
-            webbrowser.open('http://localhost:8080')
-
-        threading.Thread(target=open_browser, daemon=True).start()
-
-        # Uruchom kontener
-        subprocess.run([
-            'docker', 'run', '--rm', '-p', '8080:80', image_name
-        ])
-
-    except KeyboardInterrupt:
-        print("\n⏹️ Zatrzymano kontener")
-    finally:
-        os.chdir(original_dir)
-
-
-def action_browse(script_path):
-    """Akcja: otwórz w przeglądarce"""
-    print("🌐 Otwieranie w przeglądarce...")
-
-
     temp_dir, files = extract_eml_content(script_path)
 
     # Try to find index.html first
@@ -427,13 +334,13 @@ def action_browse(script_path):
     
     # If index.html doesn't exist, try to find HTML content in the extracted files
     if not os.path.exists(index_path):
-        print("ℹ️ Brak pliku index.html, szukam zawartości HTML w EML...")
+        print(" Looking for HTML content in EML...")
         
         # Look for HTML files in the extracted files
         html_files = [f for f in os.listdir(temp_dir) if f.endswith('.html')]
         if html_files:
             index_path = os.path.join(temp_dir, html_files[0])
-            print(f"✅ Znaleziono plik HTML: {os.path.basename(index_path)}")
+            print(f" Found HTML file: {os.path.basename(index_path)}")
         else:
             # If no HTML files found, try to find HTML content in the EML
             eml_file = os.path.join(temp_dir, 'extracted.eml')
@@ -451,12 +358,12 @@ def action_browse(script_path):
                     index_path = os.path.join(temp_dir, 'index.html')
                     with open(index_path, 'w', encoding='utf-8') as f:
                         f.write(content[html_start:])
-                    print("✅ Wyodrębniono zawartość HTML z EML")
+                    print(" Extracted HTML content from EML")
                 else:
-                    print("❌ Nie znaleziono zawartości HTML w EML")
+                    print(" No HTML content found in EML")
                     return
             else:
-                print("❌ Brak pliku EML do przetworzenia")
+                print(" No EML file to process")
                 return
 
     def update_html_links(html_file):

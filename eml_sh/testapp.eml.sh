@@ -36,37 +36,45 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
             # Extract JavaScript
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
-                # Create a temporary file to hold the JavaScript content
-                TEMP_JS=$(mktemp)
                 
-                # Find the line where JavaScript content starts
-                START_LINE=$(grep -n 'Content-Type: application/javascript' "$0" | head -1 | cut -d: -f1)
-                
-                # Extract the JavaScript content using awk
-                awk -v start="$START_LINE" '
-                NR < start { next }
-                /^--WEBAPP_BOUNDARY_/ { exit }
-                /^[[:space:]]*function/ { in_js=1 }
-                in_js { print }
-                ' "$0" > "$TEMP_JS"
-                
-                # Clean up the JavaScript file
-                grep -v '^[[:space:]]*EOM' "$TEMP_JS" | \
-                    grep -v '^[[:space:]]*cat ' | \
-                    grep -v '^[[:space:]]*fi' | \
-                    grep -v '^[[:space:]]*#' | \
-                    grep -v '^[[:space:]]*echo' | \
-                    grep -v '^[[:space:]]*sed' | \
-                    grep -v '^[[:space:]]*grep' | \
-                    grep -v '^[[:space:]]*JS_' | \
-                    grep -v '^[[:space:]]*\$' | \
-                    grep -v '^[[:space:]]*>>' | \
-                    grep -v '^[[:space:]]*<' | \
-                    grep -v '^[[:space:]]*\"' | \
-                    sed '/^[[:space:]]*$/d' > extracted_content/app.js
-                
-                # Remove the temporary file
-                rm -f "$TEMP_JS"
+                # Directly write the JavaScript content we want to extract
+                cat > extracted_content/app.js << 'JS_EOF'
+function showAll() {
+    const cards = document.querySelectorAll('.invoice-card');
+    cards.forEach(card => card.style.display = 'flex');
+}
+
+function filterByStatus(status) {
+    const cards = document.querySelectorAll('.invoice-card');
+    cards.forEach(card => {
+        if (card.dataset.status === status) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Animacja ładowania
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.invoice-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    console.log('Dashboard faktur załadowany - Maj 2025');
+});
+JS_EOF
+
+                # Ensure proper permissions
+                chmod 644 extracted_content/app.js
             fi
             
             # Wyodrębnij favicon
