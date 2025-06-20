@@ -1,4 +1,8 @@
-# LLME (Large Language Model Email Message Language)
+# EMLLM (Email Message Language for LLM)
+
+[![Documentation](https://img.shields.io/badge/docs-available-brightgreen)](docs/index.md)
+[![PyPI version](https://img.shields.io/pypi/v/emllm)](https://pypi.org/project/emllm/)
+[![License](https://img.shields.io/github/license/emllm/eml)](LICENSE)
 
 LLME to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
 
@@ -11,21 +15,12 @@ Pełna dokumentacja dostępna w katalogu [docs/](docs/):
 - [API](docs/api/index.md)
 - [Architektura](docs/architecture/index.md)
 - [Przykłady](docs/examples/index.md)
+- [FAQ](docs/faq/index.md)
 
 ## 🛠️ Instalacja
 
 ```bash
 pip install llme
-
-**Zero-dependency deployment:**
-- Brak potrzeby CI/CD pipeline'ów
-- Nie wymaga VPN ani internal network access
-- Działa przez firewall restrictions
-
-### ❌ **Wady**
-
-**Ograniczenia bezpieczeństwa:**
-- Email nie jest medium zaprojektowanym dla executables
 - Trudność w code signing i verification
 - Podatność na email interception
 
@@ -887,8 +882,8 @@ pip install llme
 ### Z źródeł
 
 ```bash
-git clone https://github.com/tomsapletta/llme.git
-cd llme
+git clone https://github.com/emllm/eml.git
+cd eml
 poetry install
 ```
 

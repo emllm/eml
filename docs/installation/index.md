@@ -5,15 +5,15 @@
 Najprostszym sposobem instalacji LLME jest użycie pip:
 
 ```bash
-pip install llme
+pip install emllm
 ```
 
 ## 📦 Instalacja z źródeł
 
 1. Klonuj repozytorium:
 ```bash
-git clone https://github.com/tomsapletta/llme.git
-cd llme
+git clone https://github.com/emllm/eml.git
+cd eml
 ```
 
 2. Zainstaluj zależności:

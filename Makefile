@@ -1,7 +1,7 @@
 # Project Makefile for LLME (Large Language Model Email Message Language)
 
 # Project name
-PROJECT_NAME = llme
+PROJECT_NAME = emllm
 
 # Poetry environment
 POETRY := poetry
