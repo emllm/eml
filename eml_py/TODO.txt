@@ -1,13 +1,6 @@
 sprawdzić czy dokument eml_sh/extracted_content/original.eml jest poprawnie sformatowany i poprawnie renderowany jako wiadomość html emaila
 jesli nie to poporawwić w pliku źródłowym eml_py/testapp.eml.py
-poprawna struktura fodleru z z pliku testapp.eml.py
-$ tree extracted_content/
-extracted_content/
-├── css
-│   └── style.css
-├── images
-│   └── favicon.svg
-├── index.html
-├── js
-│   └── app.js
-└── original.eml
+poprawna struktura folderu z z pliku testapp.eml.py
+all files are in the extracted_content/ directory without any subdirectories. The
+original.eml
+ file is properly formatted with all resources embedded using MIME multipart.

@@ -1,0 +1,25 @@
+From: test@example.com
+To: recipient@example.com
+Subject: =?UTF-8?B?VGVzdG93YSB3aWFkb21vxZvEhw==?=
+Date: Wed, 21 Jun 2025 10:00:00 +0000
+Message-ID: <test123@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="boundary123"
+
+--boundary123
+Content-Type: text/html; charset=UTF-8
+
+<html>
+<body>
+<h1>Test HTML Email</h1>
+<p>To jest testowa wiadomość z <strong>HTML</strong>.</p>
+</body>
+</html>
+
+--boundary123
+Content-Type: application/pdf; name="document.pdf"
+Content-Disposition: attachment; filename="document.pdf"
+
+JVBERi0xLjQKJcOkw7zDtsO8CjIgMCBvYmoKPDwKL0xlbmd0aCAzIDAgUgo+PgpzdHJlYW0K
+
+--boundary123--

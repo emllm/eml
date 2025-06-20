@@ -79,7 +79,6 @@ Content-ID: <style_css>
 Content-Disposition: inline; filename="style.css"
 
                 echo "Znaleziono plik CSS, wyodrębniam..."
-                mkdir -p extracted_content/css
                 sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
 Content-Type: text/css; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
@@ -87,11 +86,13 @@ Content-ID: <style_css>
 Content-Disposition: inline; filename="style.css"
 
 EOM
-            # Add CSS content
-            cat extracted_content/css/style.css >> "$TMP_EML"
+                # Add CSS content
+                cat extracted_content/style.css >> "$TMP_EML"
+            fi
             
-            # Add JavaScript part
-            cat >> "$TMP_EML" <<- EOM
+            # Add JavaScript part if exists
+            if [ -f "extracted_content/app.js" ]; then
+                cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
 Content-Type: application/javascript; charset=utf-8
@@ -100,13 +101,12 @@ Content-ID: <script_js>
 Content-Disposition: inline; filename="app.js"
 
 EOM
-            # Add JavaScript content from the extracted file
-            if [ -f "extracted_content/js/app.js" ]; then
-                cat extracted_content/js/app.js >> "$TMP_EML"
+                # Add JavaScript content
+                cat extracted_content/app.js >> "$TMP_EML"
             fi
             
             # Add favicon if exists
-            if [ -f "extracted_content/images/favicon.svg" ]; then
+            if [ -f "extracted_content/favicon.svg" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -116,7 +116,7 @@ Content-ID: <favicon_svg>
 Content-Disposition: inline; filename="favicon.svg"
 
 EOM
-                base64 < extracted_content/images/favicon.svg >> "$TMP_EML"
+                base64 < extracted_content/favicon.svg >> "$TMP_EML"
             fi
             
             # Close boundaries
@@ -266,30 +266,25 @@ Content-Transfer-Encoding: quoted-printable
 Content-ID: <script_js>
 Content-Disposition: inline; filename="app.js"
 
-            if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
-                mkdir -p extracted_content/js
-                # Extract JavaScript content between boundaries
-                sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
 
 EOM
-            # Add JavaScript content from the extracted file
-            if [ -f "extracted_content/js/app.js" ]; then
-                cat extracted_content/js/app.js >> "$TMP_EML"
+                # Add JavaScript content
+                cat extracted_content/app.js >> "$TMP_EML"
             fi
             
             # Add favicon if exists
-            if [ -f "extracted_content/images/favicon.svg" ]; then
+            if [ -f "extracted_content/favicon.svg" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
+--RELATED_BOUNDARY_12345
 
 EOM
-                base64 < extracted_content/images/favicon.svg >> "$TMP_EML"
+                base64 < extracted_content/favicon.svg >> "$TMP_EML"
             fi
             
             # Close boundaries
             echo -e "\n--RELATED_BOUNDARY_12345--" >> "$TMP_EML"
-            echo -e "\n--WEBAPP_BOUNDARY_12345--" >> "$TMP_EML"
 
 function showAll() {
     const cards = document.querySelectorAll('.invoice-card');
