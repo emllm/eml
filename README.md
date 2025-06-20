@@ -1,103 +1,164 @@
-# EMLLM (Email Message Language for LLM)
+# EMLLM - Email-based LLM Application Distribution System
 
-[![PyPI Version](https://img.shields.io/pypi/v/emllm.svg)](https://pypi.org/project/emllm/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/emllm.svg)](https://pypi.org/project/emllm/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Documentation Status](https://readthedocs.org/projects/emllm/badge/?version=latest)](https://emllm.readthedocs.io/)
-[![Tests](https://github.com/emllm/eml/actions/workflows/tests.yml/badge.svg)](https://github.com/emllm/eml/actions)
-[![Codecov](https://codecov.io/gh/emllm/eml/branch/main/graph/badge.svg)](https://codecov.io/gh/emllm/eml)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Apache Camel](https://img.shields.io/badge/Apache%20Camel-3.20.3-FF6D00?logo=apache&logoColor=white)](https://camel.apache.org/)
+[![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
 
-EMLLM is a powerful Python library for parsing, validating, and generating email messages with support for LLM integration. It provides a simple and intuitive API for working with email messages in various formats.
+EMLLM is a complete system that enables the generation and distribution of applications via email using Large Language Models (LLMs). The system allows users to request application generation via email, processes these requests using an LLM, and automatically deploys the generated applications.
 
 ## ✨ Features
 
-- Parse and validate email messages
-- Generate email messages programmatically
-- Support for MIME messages and attachments
-- Extract embedded web content from EML files
-- Flat directory structure for extracted files
-- Automatic HTML reference updates for extracted content
-- Integration with Large Language Models
-- Command-line interface for easy usage
-- REST API for remote processing
-- Comprehensive test coverage
-- Type hints for better development experience
+- **Email-based Application Generation**: Request applications via email and receive generated applications as email attachments
+- **LLM Integration**: Process application generation requests using Large Language Models (Mistral 7B via Ollama)
+- **Automated Deployment**: Automatically deploy applications upon receipt
+- **Web Dashboard**: Monitor requests and deployments through a modern web interface
+- **Containerized**: All components run in Docker containers for easy deployment
+- **Asynchronous Processing**: Non-blocking architecture for handling multiple requests
+- **Extensible**: Easily add support for new application types and deployment targets
+- **Self-documenting**: Includes API documentation and usage examples
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+- Docker and Docker Compose
+- At least 8GB of RAM (16GB recommended for LLM processing)
+- Git
+
 ### Installation
 
-```bash
-pip install emllm
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/emllm/eml.git
+   cd eml
+   ```
+
+2. Start the services:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. Access the web interface at [http://localhost:3000](http://localhost:3000)
+
+### How It Works
+
+1. **Bot Generator**: Sends random application generation requests via email
+2. **Camel Server**: Processes incoming emails, generates applications using LLM, and sends responses
+3. **Client Agent**: Monitors for new application emails and deploys them automatically
+4. **Web UI**: Provides a dashboard to monitor requests and deployments
+
+### Sending a Request
+
+1. Send an email to `llm@example.com` with your application requirements in the body
+2. The system will process your request and send back an email with the generated application
+3. The client agent will automatically deploy the application
+
+### Monitoring
+
+- **MailHog Web UI**: [http://localhost:8025](http://localhost:8025) - View sent and received emails
+- **Web Dashboard**: [http://localhost:3000](http://localhost:3000) - Monitor requests and deployments
+
+## 🏗️ Project Structure
+
+```
+eml/
+├── bot-generator/           # Service that sends random application requests
+│   ├── Dockerfile
+│   └── bot.groovy
+├── camel-server/             # Main processing service with Apache Camel
+│   ├── build.gradle
+│   ├── Dockerfile
+│   └── src/
+│       └── main/groovy/com/emllm/
+│           ├── Application.groovy
+│           └── EmailProcessingRoute.groovy
+├── client-agent/             # Client agent for deploying applications
+│   ├── Dockerfile
+│   └── client.groovy
+├── web-ui/                   # React-based web dashboard
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+│       ├── App.js
+│       ├── App.css
+│       ├── index.js
+│       └── index.css
+├── docker-compose.yml        # Docker Compose configuration
+└── README.md                 # This file
 ```
 
-### EML Extraction
+## ⚙️ Configuration
 
-EMLLM provides powerful tools for extracting web content from EML files:
+The system is configured using environment variables. Create a `.env` file in the project root with the following variables:
 
-#### Python Implementation (`eml_py/`)
+```env
+# Mail Server Configuration
+SMTP_HOST=mailhog
+SMTP_PORT=1025
+IMAP_HOST=mailhog
+IMAP_PORT=1143
 
-```bash
-# Extract files from an EML file
-python3 eml_py/testapp.eml.py extract
+# Email Accounts
+BOT_EMAIL=bot@example.com
+LLM_EMAIL=llm@example.com
+CLIENT_EMAIL=client@example.com
+EMAIL_PASSWORD=password
 
-# Run the extracted web application
-python3 eml_py/testapp.eml.py run
+# LLM Configuration
+OLLAMA_BASE_URL=http://ollama:11434
 
-# Open in browser
-python3 eml_py/testapp.eml.py browse
+# Deployment
+DEPLOYMENT_DIR=/app/deployments
 ```
 
-#### Shell Implementation (`eml_sh/`)
+## 🚀 Running the System
 
+1. **Start all services**:
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **View the web dashboard**:
+   Open [http://localhost:3000](http://localhost:3000) in your browser
+
+3. **View emails in MailHog**:
+   Open [http://localhost:8025](http://localhost:8025) to see all sent and received emails
+
+4. **Stop all services**:
+   ```bash
+   docker-compose down
+   ```
+
+## 🔍 Monitoring and Logs
+
+View logs for a specific service:
 ```bash
-# Make the script executable
-chmod +x eml_sh/testapp.eml.sh
-
-# Extract files from an EML file
-./eml_sh/testapp.eml.sh extract
-
-# Run the extracted web application
-./eml_sh/testapp.eml.sh run
-
-# Open in browser
-./eml_sh/testapp.eml.sh browse
+docker-compose logs -f service_name  # e.g., camel-server, client-agent, etc.
 ```
 
-Both implementations support:
-- Extracting HTML, CSS, JavaScript, and other assets
-- Flat directory structure for easy deployment
-- Automatic path resolution in HTML files
-- Cross-platform compatibility
+## 🤖 Available Services
 
-### Basic Usage
+| Service | Description | Port |
+|---------|-------------|------|
+| mailhog | Email server for development | 8025 (Web UI), 1025 (SMTP), 1143 (IMAP) |
+| bot-generator | Sends random application requests | - |
+| camel-server | Processes emails and generates applications | 8080 |
+| client-agent | Deploys received applications | - |
+| ollama | Local LLM server | 11434 |
+| web-ui | Web dashboard | 3000 |
 
-For general email parsing and generation:
+## 📝 License
 
-### Basic Usage
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-```python
-from emllm import EMLLMParser
+## 🤝 Contributing
 
-# Initialize the parser
-parser = EMLLMParser()
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-# Parse an email message
-message = """
-From: sender@example.com
-To: recipient@example.com
-Subject: Test Message
+## 📧 Contact
 
-Hello, this is a test message.
-"""
-
-parsed = parser.parse(message)
-print(parsed)
-
-## 📚 Documentation
-
-Full documentation is available at [emllm.readthedocs.io](https://emllm.readthedocs.io/).
+For questions or support, please open an issue on our [GitHub repository](https://github.com/emllm/eml).
 
 Key sections:
 - [Installation Guide](docs/installation/index.md)
