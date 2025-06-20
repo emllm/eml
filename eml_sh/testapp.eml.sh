@@ -19,18 +19,19 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
     case "$1" in
         extract)
             echo "Wyodrębnianie zawartości..."
-            mkdir -p extracted_content
+            EXTRACTED_DIR="$(pwd)/extracted_content"
+            mkdir -p "$EXTRACTED_DIR"
             
             # Wyodrębnij HTML
-            sed -n '/^<\!DOCTYPE html>/,/^<\/html>$/p' "$0" > extracted_content/index.html
+            sed -n '/^<\!DOCTYPE html>/,/^<\/html>$/p' "$0" > "$EXTRACTED_DIR/index.html"
             
             # Wyodrębnij CSS
             if grep -q 'Content-Type: text/css' "$0"; then
                 echo "Znaleziono plik CSS, wyodrębniam..."
                 sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' | base64 -d > extracted_content/style.css 2>/dev/null || \
+                    sed '1d;$d' | base64 -d > "$EXTRACTED_DIR/style.css" 2>/dev/null || \
                     sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' > extracted_content/style.css
+                    sed '1d;$d' > "$EXTRACTED_DIR/style.css"
             fi
             
             # Extract JavaScript
@@ -38,7 +39,7 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
                 
                 # Directly write the JavaScript content we want to extract
-                cat > extracted_content/app.js << 'JS_EOF'
+                cat > "$EXTRACTED_DIR/app.js" << 'JS_EOF'
 function showAll() {
     const cards = document.querySelectorAll('.invoice-card');
     cards.forEach(card => card.style.display = 'flex');
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
 JS_EOF
 
                 # Ensure proper permissions
-                chmod 644 extracted_content/app.js
+                chmod 644 "$EXTRACTED_DIR/app.js"
             fi
             
             # Wyodrębnij favicon
@@ -82,23 +83,20 @@ JS_EOF
                 echo "Znaleziono favicon, wyodrębniam..."
                 sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
                     grep -v '^Content-' | \
-                    base64 -d > extracted_content/favicon.svg 2>/dev/null || \
+                    base64 -d > "$EXTRACTED_DIR/favicon.svg" 2>/dev/null || \
                     sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    grep -v '^Content-' > extracted_content/favicon.svg
+                    grep -v '^Content-' > "$EXTRACTED_DIR/favicon.svg"
             fi
-            
-            # Create a temporary directory for CID version
-            mkdir -p extracted_content
             
             # Create the HTML with CID references
             echo "Tworzenie wersji HTML z referencjami CID..."
-            cat extracted_content/index.html | \
+            cat "$EXTRACTED_DIR/index.html" | \
                 sed 's|href="css/style.css"|href="cid:style_css"|g' | \
                 sed 's|src="js/app.js"|src="cid:script_js"|g' | \
-                sed 's|href="images/favicon.svg"|href="cid:favicon_svg"|g' > extracted_content/cid_index.html
+                sed 's|href="images/favicon.svg"|href="cid:favicon_svg"|g' > "$EXTRACTED_DIR/cid_index.html"
             
             # Create a temporary file for the EML content
-            TMP_EML=$(mktemp)
+            TMP_EML="$EXTRACTED_DIR/original.eml"
             
             # Write headers to the temporary file
             cat > "$TMP_EML" <<- EOM
@@ -122,10 +120,10 @@ Content-ID: <main_html>
 EOM
 
             # Add HTML content
-            cat extracted_content/cid_index.html >> "$TMP_EML"
+            cat "$EXTRACTED_DIR/cid_index.html" >> "$TMP_EML"
             
             # Add CSS part if exists
-            if [ -f "extracted_content/style.css" ]; then
+            if [ -f "$EXTRACTED_DIR/style.css" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -136,11 +134,11 @@ Content-Disposition: inline; filename="style.css"
 
 EOM
                 # Add CSS content
-                cat extracted_content/style.css >> "$TMP_EML"
+                cat "$EXTRACTED_DIR/style.css" >> "$TMP_EML"
             fi
             
             # Add JavaScript part if exists
-            if [ -f "extracted_content/app.js" ]; then
+            if [ -f "$EXTRACTED_DIR/app.js" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -151,11 +149,11 @@ Content-Disposition: inline; filename="app.js"
 
 EOM
                 # Add JavaScript content
-                cat extracted_content/app.js >> "$TMP_EML"
+                cat "$EXTRACTED_DIR/app.js" >> "$TMP_EML"
             fi
             
             # Add favicon if exists
-            if [ -f "extracted_content/favicon.svg" ]; then
+            if [ -f "$EXTRACTED_DIR/favicon.svg" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -165,23 +163,21 @@ Content-ID: <favicon_svg>
 Content-Disposition: inline; filename="favicon.svg"
 
 EOM
-                base64 < extracted_content/favicon.svg >> "$TMP_EML"
+                base64 < "$EXTRACTED_DIR/favicon.svg" >> "$TMP_EML"
             fi
             
             # Close boundaries
             echo -e "\n--RELATED_BOUNDARY_12345--" >> "$TMP_EML"
             echo -e "\n--WEBAPP_BOUNDARY_12345--" >> "$TMP_EML"
             
-            # Move the temporary file to the final location
-            mv "$TMP_EML" extracted_content/original.eml
             # Update the HTML file with correct paths for local serving
-            HTML_CONTENT=$(cat extracted_content/index.html)
+            HTML_CONTENT=$(cat "$EXTRACTED_DIR/index.html")
             
             # Update paths in HTML
             UPDATED_HTML=$(echo "$HTML_CONTENT" | \
-                sed 's|href="cid:style_css"|href="css/style.css"|g' | \
-                sed 's|src="cid:script_js"|src="js/app.js"|g' | \
-                sed 's|href="cid:favicon_svg"|href="images/favicon.svg"|g')
+                sed 's|href="cid:style_css"|href="style.css"|g' | \
+                sed 's|src="cid:script_js"|src="app.js"|g' | \
+                sed 's|href="cid:favicon_svg"|href="favicon.svg"|g'))
             
             # Add favicon link if it doesn't exist
             if ! echo "$UPDATED_HTML" | grep -q 'link.*favicon'; then

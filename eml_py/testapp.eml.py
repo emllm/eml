@@ -129,38 +129,81 @@ def extract_eml_content(script_path: Union[str, Path]) -> Tuple[Optional[str], L
             - A list of extracted files (always empty in this implementation)
     """
     try:
-        with open(script_path, 'r', encoding='utf-8', errors='ignore') as f:
-            content = f.read()
+        script_path = Path(script_path).resolve()
+        print("🔍 Searching for EML content in script...")
         
-        # Look for the EML content between triple quotes
-        eml_start = content.find('eml_content = """')
-        if eml_start == -1:
-            eml_start = content.find("eml_content = '''")
-            if eml_start == -1:
-                # Try to find the EML content directly
-                eml_start = content.find('From ')
-                if eml_start == -1:
-                    return None, []
-                eml_end = content.find(f'\n--{EML_BOUNDARY}--')
-                if eml_end == -1:
-                    return None, []
-                eml_end = content.find('\n', eml_end) + 1
-                return content[eml_start:eml_end], []
-            eml_start += len("eml_content = '''")
-            eml_end = content.find("'''", eml_start)
-        else:
-            eml_start += len('eml_content = """')
-            eml_end = content.find('"""', eml_start)
+        # Read the entire file as binary to avoid any encoding issues
+        with open(script_path, 'rb') as f:
+            script_content = f.read().decode('utf-8', errors='replace')
         
-        if eml_end == -1:
+        # Find the EML content start marker
+        start_marker = "# EML CONTENT STARTS HERE"
+        start_idx = script_content.find(start_marker)
+        if start_idx == -1:
+            print("❌ EML start marker not found in script")
             return None, []
         
-        return content[eml_start:eml_end], []
-    except (IOError, OSError) as e:
-        print(f"Error reading script file: {e}")
-        return None, []
+        print(f"✅ Found EML start marker at position {start_idx}")
+        
+        # Find the start of the EML content after the marker
+        # Look for the first line that starts with MIME-Version:
+        lines = script_content.splitlines()
+        eml_start_line = -1
+        for i in range(len(lines)):
+            if i * 100 < start_idx:  # Skip lines before our marker
+                continue
+                
+            if lines[i].strip().startswith('MIME-Version:'):
+                eml_start_line = i
+                break
+        
+        if eml_start_line == -1:
+            print("❌ Could not find start of EML content (MIME-Version header)")
+            return None, []
+            
+        print(f"✅ Found EML content start at line {eml_start_line}")
+        
+        # Find the end of the EML content
+        eml_lines = []
+        for i in range(eml_start_line, len(lines)):
+            line = lines[i]
+            eml_lines.append(line)
+            
+            # Check if we've reached the end of the EML content
+            if line.strip() == '--UNIVERSAL_WEBAPP_BOUNDARY--':
+                break
+        
+        # Join the lines to get the EML content
+        eml_content = '\n'.join(eml_lines).strip()
+        
+        # Verify we have content
+        if not eml_content:
+            print("❌ No EML content found after start marker")
+            return None, []
+        
+        # Verify this looks like valid EML content
+        if not eml_content.startswith('MIME-Version:'):
+            print("❌ Invalid EML content: Missing MIME-Version header")
+            print("First 100 chars of content:", eml_content[:100])
+            return None, []
+            
+        if 'Content-Type:' not in eml_content:
+            print("❌ Invalid EML content: Missing Content-Type header")
+            return None, []
+            
+        # Ensure the EML content ends with the boundary
+        boundary = '--UNIVERSAL_WEBAPP_BOUNDARY--'
+        if not eml_content.strip().endswith(boundary):
+            print("⚠️ Adding missing EML end boundary")
+            eml_content = eml_content.rstrip() + "\n" + boundary + "\n"
+        
+        print(f"✅ Extracted {len(eml_content)} bytes of EML content")
+        return eml_content, []
+        
     except Exception as e:
-        print(f"Unexpected error extracting EML content: {e}")
+        print(f"❌ Error extracting EML content: {e}")
+        import traceback
+        traceback.print_exc()
         return None, []
 
 def update_html_references(html_path: str, cid_map: Dict[str, str]) -> None:
@@ -228,16 +271,30 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
     cid_map = {}
     
     try:
-        print(f"\n Analyzing EML file: {eml_file}")
+        print(f"\n🔍 Analyzing EML file: {eml_file}")
         
-        # First try to parse the EML file as binary
+        # Read the raw content for debugging
+        with open(eml_file, 'r', encoding='utf-8', errors='ignore') as f:
+            raw_content = f.read()
+        
+        print(f"📄 Raw content length: {len(raw_content)} bytes")
+        print(f"📄 Content preview:\n{raw_content[:500]}...")
+        
+        # Try to parse as binary first
         with open(eml_file, 'rb') as f:
             msg = email.message_from_binary_file(f, policy=email.policy.default)
-            
+        
         if not msg:
-            raise ValueError("Failed to parse EML file")
+            print("❌ Failed to parse EML as binary, trying as text...")
+            with open(eml_file, 'r', encoding='utf-8') as f:
+                msg = email.message_from_file(f, policy=email.policy.default)
+        
+        if not msg:
+            raise ValueError("❌ Failed to parse EML file using any method")
             
-        print(f"\nSuccessfully parsed EML message (type: {msg.get_content_type()})")
+        print(f"✅ Successfully parsed EML message")
+        print(f"📧 Content-Type: {msg.get_content_type()}")
+        print(f"📧 Content-Disposition: {msg.get('Content-Disposition')}")
         
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -247,9 +304,15 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
             try:
                 content_type = part.get_content_type()
                 content_id = part.get("Content-ID", "").strip("<>")
+                content_disposition = part.get("Content-Disposition", "")
+                
+                print(f"\n🔍 Processing part: {content_type}")
+                print(f"   Content-ID: {content_id}")
+                print(f"   Disposition: {content_disposition}")
                 
                 # Skip multipart container parts (we'll process their children)
                 if part.is_multipart() and content_type != 'multipart/related':
+                    print("   ↪️ Skipping multipart container")
                     continue
                 
                 # Get filename from Content-Disposition or Content-Type
@@ -281,6 +344,7 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
                 # Map CID to filename for later reference
                 if content_id and content_id not in cid_map:
                     cid_map[content_id] = filename
+                    print(f"   📌 Mapped CID {content_id} to {filename}")
                 
                 # Save the file
                 file_path = os.path.join(output_dir, filename)
@@ -291,6 +355,7 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
                         payload = payload.encode('utf-8')
                 
                 if payload:
+                    print(f"   💾 Saving {len(payload)} bytes to {filename}")
                     with open(file_path, 'wb') as f:
                         f.write(payload)
                     
@@ -323,9 +388,127 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
         traceback.print_exc()
         return []
 
+def action_extract(script_path: str, output_dir: str = None) -> str:
+    """Extract EML content to the specified directory.
+    
+    Args:
+        script_path: Path to the script containing EML content
+        output_dir: Directory to extract to (default: temp directory)
+        
+    Returns:
+        Path to the directory containing extracted files
+    """
+    if output_dir is None:
+        import tempfile
+        output_dir = tempfile.mkdtemp(prefix='webapp_')
+    else:
+        os.makedirs(output_dir, exist_ok=True)
+    
+    eml_content, _ = extract_eml_content(script_path)
+    if not eml_content:
+        raise ValueError("No EML content found in script")
+    
+    # Save the EML content
+    eml_path = os.path.join(output_dir, 'original.eml')
+    with open(eml_path, 'w', encoding='utf-8') as f:
+        f.write(eml_content)
+    
+    # Extract files from EML
+    extracted_files = extract_from_eml(eml_path, output_dir)
+    print(f"\n✅ Extracted {len(extracted_files)} files to: {output_dir}")
+    return output_dir
+
+
+def action_run(script_path: str, port: int = DEFAULT_PORT) -> None:
+    """Run the web application locally.
+    
+    Args:
+        script_path: Path to the script containing EML content
+        port: Port to run the server on
+    """
+    # Extract to a temporary directory
+    temp_dir = action_extract(script_path)
+    
+    # Find the main HTML file
+    index_path = os.path.join(temp_dir, 'index.html')
+    if not os.path.exists(index_path):
+        html_files = [f for f in os.listdir(temp_dir) 
+                     if f.endswith('.html')]
+        if html_files:
+            index_path = os.path.join(temp_dir, html_files[0])
+    
+    if not os.path.exists(index_path):
+        raise FileNotFoundError("No HTML file found in extracted content")
+    
+    # Start HTTP server
+    import http.server
+    import socketserver
+    import webbrowser
+    
+    os.chdir(temp_dir)
+    handler = http.server.SimpleHTTPRequestHandler
+    httpd = socketserver.TCPServer(("", port), handler)
+    
+    url = f"http://localhost:{port}"
+    print(f"\n🌐 Starting web server at {url}")
+    print("Press Ctrl+C to stop the server")
+    
+    try:
+        webbrowser.open(url)
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n🛑 Server stopped")
+    finally:
+        httpd.server_close()
+
+
 def action_browse(script_path: str) -> None:
-    """Action: Open in browser"""
-    print(" Opening in browser...")
+    """Open the extracted content in the default browser.
+    
+    Args:
+        script_path: Path to the script containing EML content
+    """
+    # Extract to a temporary directory
+    temp_dir = action_extract(script_path)
+    
+    # Try to find index.html first
+    index_path = os.path.join(temp_dir, 'index.html')
+    
+    # If index.html doesn't exist, try to find HTML content in the extracted files
+    if not os.path.exists(index_path):
+        print("Looking for HTML content in EML...")
+        
+        # Look for HTML files in the extracted files
+        html_files = [f for f in os.listdir(temp_dir) 
+                     if f.endswith('.html')]
+        if html_files:
+            index_path = os.path.join(temp_dir, html_files[0])
+            print(f"Found HTML file: {os.path.basename(index_path)}")
+        else:
+            # If no HTML files found, try to find HTML content in the EML
+            eml_file = os.path.join(temp_dir, 'original.eml')
+            if os.path.exists(eml_file):
+                with open(eml_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Look for HTML content in the EML
+                html_start = content.lower().find('<html')
+                if html_start != -1:
+                    # Create index.html with the HTML content
+                    index_path = os.path.join(temp_dir, 'index.html')
+                    with open(index_path, 'w', encoding='utf-8') as f:
+                        f.write(content[html_start:])
+                    print("Extracted HTML content from EML")
+                else:
+                    print("No HTML content found in EML")
+                    return
+            else:
+                print("No EML file to process")
+                return
+    
+    # Open the HTML file in the default browser
+    print(f"Opening {os.path.basename(index_path)} in browser...")
+    webbrowser.open(f"file://{os.path.abspath(index_path)}")
     
     temp_dir, files = extract_eml_content(script_path)
 
@@ -487,6 +670,21 @@ def main():
     action = 'browse'  # domyślna akcja
     if len(sys.argv) > 1:
         action = sys.argv[1].lower()
+        
+        # Handle extract with output directory
+        if action == 'extract' and len(sys.argv) > 2:
+            output_dir = sys.argv[2]
+            action_extract(script_path, output_dir)
+            return
+        # Handle run with port
+        elif action == 'run' and len(sys.argv) > 2:
+            try:
+                port = int(sys.argv[2])
+                action_run(script_path, port)
+                return
+            except ValueError:
+                print(f"Error: Invalid port number: {sys.argv[2]}")
+                sys.exit(1)
 
     # GUI fallback dla Windows double-click
     if len(sys.argv) == 1 and get_platform() == 'windows':
