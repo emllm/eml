@@ -1,5 +1,8 @@
 Content-Type: multipart/alternative; boundary="WEBAPP_BOUNDARY_12345"
-
+From: sender@example.com
+To: recipient@example.com
+Subject: Test Message
+Date: Wed, 21 Jun 2025 10:00:00 +0000
 #!/bin/bash
 #
 # Self-extracting EML script - testapp.eml.sh
@@ -17,10 +20,10 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
         extract)
             echo "Wyodrębnianie zawartości..."
             mkdir -p extracted_content
-
+            
             # Wyodrębnij HTML
             sed -n '/^<\!DOCTYPE html>/,/^<\/html>$/p' "$0" > extracted_content/index.html
-
+            
             # Wyodrębnij CSS
             if grep -q 'Content-Type: text/css' "$0"; then
                 echo "Znaleziono plik CSS, wyodrębniam..."
@@ -30,37 +33,97 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
                     sed '1d;$d' > extracted_content/css/style.css
             fi
-
+            
             # Wyodrębnij JS
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
                 mkdir -p extracted_content/js
-                sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' | base64 -d > extracted_content/js/app.js 2>/dev/null || \
-                    sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' > extracted_content/js/app.js
+                # Pobierz zawartość między znacznikami Content-Type a następnym --WEBAPP_BOUNDARY_
+                # i wyciągnij tylko kod JavaScript (pomijając nagłówki i linie poleceń)
+                awk '/Content-Type: application\/javascript/{ 
+                    while(getline) { 
+                        if(/^--WEBAPP_BOUNDARY_/) exit; 
+                        if(!/^Content-/ && !/^\s*$/) print; 
+                    } 
+                }' "$0" > extracted_content/js/app.js
             fi
-
-            # Skopiuj oryginalny plik EML
+            
+            # Wyodrębnij favicon
+            if grep -q 'Content-Type: image/svg+xml.*favicon' "$0"; then
+                echo "Znaleziono favicon, wyodrębniam..."
+                mkdir -p extracted_content/images
+                sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    grep -v '^Content-' | \
+                    base64 -d > extracted_content/images/favicon.svg 2>/dev/null || \
+                    sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    grep -v '^Content-' > extracted_content/images/favicon.svg
+            fi
+            
+            # Utwórz kopię oryginalnego pliku EML
             cp "$0" extracted_content/original.eml
-
-            # Zaktualizuj ścieżki w pliku HTML
-            sed -i 's|href="cid:style_css"|href="css/style.css"|g' extracted_content/index.html
-            sed -i 's|src="cid:app_js"|src="js/app.js"|g' extracted_content/index.html
-
+            
+            # Zapisz oryginalną zawartość HTML
+            HTML_CONTENT=$(cat extracted_content/index.html)
+            
+            # Zaktualizuj ścieżki w HTML
+            UPDATED_HTML=$(echo "$HTML_CONTENT" | \
+                sed 's|href="cid:style_css"|href="css/style.css"|g' | \
+                sed 's|src="cid:script_js"|src="js/app.js"|g')
+            
+            # Dodaj link do favicon, jeśli nie istnieje
+            if ! echo "$UPDATED_HTML" | grep -q 'link.*favicon'; then
+                UPDATED_HTML=$(echo "$UPDATED_HTML" | \
+                    sed '/<head>/a \    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">')
+            fi
+            
+            # Zapisz zaktualizowany HTML
+            echo "$UPDATED_HTML" > extracted_content/index.html
+            
+            # Przygotuj oryginalną wersję HTML dla pliku EML
+            ORIGINAL_HTML=$(echo "$UPDATED_HTML" | \
+                sed 's|href="css/style.css"|href="cid:style_css"|g' | \
+                sed 's|src="js/app.js"|src="cid:script_js"|g')
+            
+            # Zaktualizuj oryginalny plik EML z oryginalnymi ścieżkami
+            awk -v html="$ORIGINAL_HTML" '{
+                if ($0 ~ /^<!DOCTYPE html>/) { in_html=1; print html; next }
+                if (in_html && $0 ~ /<\/html>/) { in_html=0; next }
+                if (!in_html) print $0
+            }' extracted_content/original.eml > extracted_content/original.eml.tmp && \
+            mv extracted_content/original.eml.tmp extracted_content/original.eml
+            
             echo "Zawartość wyodrębniona do katalogu extracted_content/"
             ls -la extracted_content/
             ;;
         run)
-            echo "Uruchamianie aplikacji..."
+            echo "Uruchamianie lokalnego serwera..."
             # Najpierw wyodrębnij, jeśli to konieczne
             if [ ! -d "extracted_content" ]; then
                 "$0" extract
             fi
             # Uruchom prosty serwer HTTP
             echo "Aplikacja dostępna pod adresem: http://localhost:8000"
-            echo "Naciśnij Ctrl+C, aby zakończyć"
-            cd extracted_content && python3 -m http.server 8000
+            cd extracted_content
+            # Użyj Pythona z prostym serwerem HTTP z obsługą CORS
+            python3 -c '
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import os
+
+class CORSRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
+if __name__ == "__main__":
+    server_address = ("", 8000)
+    httpd = HTTPServer(server_address, CORSRequestHandler)
+    print("Serwer działa pod adresem http://localhost:8000")
+    httpd.serve_forever()
+'
             ;;
         browse)
             echo "Otwieranie w przeglądarce..."
@@ -93,6 +156,7 @@ Content-Transfer-Encoding: quoted-printable
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Faktur - Maj 2025</title>
@@ -143,7 +207,7 @@ Content-Transfer-Encoding: quoted-printable
         </div>
     </main>
 
-    <script src="cid:script_js"></script>
+    <script type="module" src="cid:script_js"></script>
 </body>
 </html>
 
@@ -375,6 +439,19 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 
 --WEBAPP_BOUNDARY_12345
+Content-Type: image/svg+xml
+Content-ID: <favicon_svg>
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename="favicon.svg"
+
+PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzIiIGhl
+aWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIw
+MDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjNGY0
+NmVlIi8+CiAgPHBhdGggZD0iTTE2IDhMMjAgMTJIMTJMMTYgOFoiIGZpbGw9IndoaXRlIi8+CiAg
+PHBhdGggZD0iTTEyIDE0SDIwVjIySDEyVjE0WiIgZmlsbD0id2hpdGUiLz4KICA8cGF0aCBkPSJN
+OCAyNEgyNFYyNkg4VjI0WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==
+
+--WEBAPP_BOUNDARY_12345
 Content-Type: application/json
 Content-Transfer-Encoding: quoted-printable
 Content-Disposition: inline; filename="metadata.json"
@@ -389,6 +466,7 @@ Content-Disposition: inline; filename="metadata.json"
     "index.html",
     "style.css",
     "script.js",
+    "favicon.svg",
     "invoice1_thumb.jpg",
     "invoice2_thumb.jpg",
     "Dockerfile"

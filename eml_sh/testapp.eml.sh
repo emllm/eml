@@ -1,5 +1,8 @@
 Content-Type: multipart/alternative; boundary="WEBAPP_BOUNDARY_12345"
-
+From: sender@example.com
+To: recipient@example.com
+Subject: Test Message
+Date: Wed, 21 Jun 2025 10:00:00 +0000
 #!/bin/bash
 #
 # Self-extracting EML script - testapp.eml.sh
@@ -36,8 +39,13 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
                 mkdir -p extracted_content/js
                 # Pobierz zawartość między znacznikami Content-Type a następnym --WEBAPP_BOUNDARY_
-                awk '/Content-Type: application\/javascript/{flag=1; next} /--WEBAPP_BOUNDARY_/{flag=0} flag' "$0" | \
-                    grep -v '^Content-' > extracted_content/js/app.js
+                # i wyciągnij tylko kod JavaScript (pomijając nagłówki i linie poleceń)
+                awk '/Content-Type: application\/javascript/{ 
+                    while(getline) { 
+                        if(/^--WEBAPP_BOUNDARY_/) exit; 
+                        if(!/^Content-/ && !/^\s*$/) print; 
+                    } 
+                }' "$0" > extracted_content/js/app.js
             fi
             
             # Wyodrębnij favicon
@@ -51,31 +59,71 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     grep -v '^Content-' > extracted_content/images/favicon.svg
             fi
             
-            # Skopiuj oryginalny plik EML
+            # Utwórz kopię oryginalnego pliku EML
             cp "$0" extracted_content/original.eml
             
-            # Zaktualizuj ścieżki w pliku HTML
-            sed -i 's|href="cid:style_css"|href="css/style.css"|g' extracted_content/index.html
-            sed -i 's|src="cid:app_js"|src="js/app.js"|g' extracted_content/index.html
+            # Zapisz oryginalną zawartość HTML
+            HTML_CONTENT=$(cat extracted_content/index.html)
             
-            # Dodaj link do favicon w head, jeśli nie istnieje
-            if ! grep -q 'link.*favicon' extracted_content/index.html; then
-                sed -i '/<head>/a \    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">' extracted_content/index.html
+            # Zaktualizuj ścieżki w HTML
+            UPDATED_HTML=$(echo "$HTML_CONTENT" | \
+                sed 's|href="cid:style_css"|href="css/style.css"|g' | \
+                sed 's|src="cid:script_js"|src="js/app.js"|g')
+            
+            # Dodaj link do favicon, jeśli nie istnieje
+            if ! echo "$UPDATED_HTML" | grep -q 'link.*favicon'; then
+                UPDATED_HTML=$(echo "$UPDATED_HTML" | \
+                    sed '/<head>/a \    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">')
             fi
+            
+            # Zapisz zaktualizowany HTML
+            echo "$UPDATED_HTML" > extracted_content/index.html
+            
+            # Przygotuj oryginalną wersję HTML dla pliku EML
+            ORIGINAL_HTML=$(echo "$UPDATED_HTML" | \
+                sed 's|href="css/style.css"|href="cid:style_css"|g' | \
+                sed 's|src="js/app.js"|src="cid:script_js"|g')
+            
+            # Zaktualizuj oryginalny plik EML z oryginalnymi ścieżkami
+            awk -v html="$ORIGINAL_HTML" '{
+                if ($0 ~ /^<!DOCTYPE html>/) { in_html=1; print html; next }
+                if (in_html && $0 ~ /<\/html>/) { in_html=0; next }
+                if (!in_html) print $0
+            }' extracted_content/original.eml > extracted_content/original.eml.tmp && \
+            mv extracted_content/original.eml.tmp extracted_content/original.eml
             
             echo "Zawartość wyodrębniona do katalogu extracted_content/"
             ls -la extracted_content/
             ;;
         run)
-            echo "Uruchamianie aplikacji..."
+            echo "Uruchamianie lokalnego serwera..."
             # Najpierw wyodrębnij, jeśli to konieczne
             if [ ! -d "extracted_content" ]; then
                 "$0" extract
             fi
             # Uruchom prosty serwer HTTP
             echo "Aplikacja dostępna pod adresem: http://localhost:8000"
-            echo "Naciśnij Ctrl+C, aby zakończyć"
-            cd extracted_content && python3 -m http.server 8000
+            cd extracted_content
+            # Użyj Pythona z prostym serwerem HTTP z obsługą CORS
+            python3 -c '
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import os
+
+class CORSRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
+if __name__ == "__main__":
+    server_address = ("", 8000)
+    httpd = HTTPServer(server_address, CORSRequestHandler)
+    print("Serwer działa pod adresem http://localhost:8000")
+    httpd.serve_forever()
+'
             ;;
         browse)
             echo "Otwieranie w przeglądarce..."
