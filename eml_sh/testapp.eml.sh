@@ -157,7 +157,7 @@ Content-Transfer-Encoding: quoted-printable
         </div>
     </main>
 
-    <script src="cid:script_js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
 
