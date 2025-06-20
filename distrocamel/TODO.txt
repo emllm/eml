@@ -761,6 +761,9 @@ services:
 Super! Przygotuję teraz strukturę katalogów i pliki z kompletnym kodem do projektu.
 
 ---
+Super! Przygotuję teraz strukturę katalogów i pliki z kompletnym kodem do projektu.
+
+---
 
 # Struktura katalogów i plików
 
@@ -943,5 +946,41 @@ class ClientEmailRoute extends RouteBuilder {
 ```yaml
 version: "3.8"
 
+services:
+  camel-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - ./server/private.pem:/app/private.pem
+      - ./server/public.pem:/app/public.pem
+      - ./server/generated:/app/generated
+    environment:
+      - SMTP_USER=user
+      - SMTP_PASS=pass
+    ports:
+      - "8080:8080"
 
+  client-agent:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    volumes:
+      - ./client/public.pem:/client/public.pem
+      - ./client/download:/client/download
+      - ./client/deploy:/client/deploy
+    environment:
+      - IMAP_USER=client@domain.com
+      - IMAP_PASS=pass
 ```
+
+---
+
+# Co teraz?
+
+1. **Wygeneruj JAR-y** z kodem Camel + Groovy (np. przez Maven/Gradle).
+2. Skopiuj klucze `private.pem` i `public.pem` do `server/` i `client/`.
+3. Uruchom `docker-compose up --build`.
+4. Zapewnij poprawne dane do IMAP/SMTP w Camel i środowisku.
+5. Testuj przepływ: email → generacja → podpis → wysyłka → odbiór → weryfikacja → deploy.
+
