@@ -1,0 +1,13 @@
+sprawdzić czy dokument eml_sh/extracted_content/original.eml jest poprawnie sformatowany i poproawnie renderowany jako wiadomość html emaila
+jesli nie to poporawwić w pliku źródłowym eml_sh/testapp.eml.sh
+poprawna struktura fodleru z z pliku testapp.eml.sh
+$ tree extracted_content/
+extracted_content/
+├── css
+│   └── style.css
+├── images
+│   └── favicon.svg
+├── index.html
+├── js
+│   └── app.js
+└── original.eml

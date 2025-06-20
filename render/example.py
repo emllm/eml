@@ -453,4 +453,130 @@ def print_summary_and_recommendations():
                 'docker run -d -p 5000:5000 my-eml-server',
                 'curl http://localhost:5000/api/health'
             ],
-            'pros': ['Pełna kontrola', 'Możliw
+            'pros': ['Pełna kontrola', 'Możliwość modyfikacji', 'API REST', 'Brak uwierzytelnienia'],
+            'cons': ['Wymaga budowania', 'Więcej konfiguracji']
+        },
+        {
+            'title': '🐍 Biblioteka Python - Integracja',
+            'description': 'Integruj bezpośrednio w aplikacji Python',
+            'commands': [
+                'pip install eml-parser python-magic-bin',
+                'python eml_advanced_parser.py',
+                'python eml_renderer_basic.py'
+            ],
+            'pros': ['Najlepsza integracja', 'Pełna elastyczność', 'Bez Docker'],
+            'cons': ['Wymaga zarządzania zależnościami', 'Tylko Python']
+        }
+    ]
+
+    for rec in recommendations:
+        print(f"\n{rec['title']}")
+        print("-" * len(rec['title']))
+        print(f"📝 {rec['description']}")
+
+        print("\n💻 Komendy:")
+        for cmd in rec['commands']:
+            print(f"   {cmd}")
+
+        print(f"\n✅ Zalety: {', '.join(rec['pros'])}")
+        print(f"❌ Wady: {', '.join(rec['cons'])}")
+
+    print(f"\n🎯 REKOMENDACJA:")
+    print("1. **Dla szybkiego testowania**: Użyj gotowego Docker EMLRender")
+    print("2. **Dla produkcji**: Zbuduj własny serwer z pełną kontrolą")
+    print("3. **Dla integracji**: Użyj bibliotek Python bezpośrednio")
+
+
+def run_comprehensive_demo():
+    """Uruchom kompletną demonstrację"""
+    print("🧪 KOMPLEKSOWA DEMONSTRACJA ROZWIĄZAŃ EML")
+    print("=" * 60)
+    print("Ten skrypt demonstruje różne podejścia do renderowania plików EML")
+    print("Sprawdza dostępność i testuje każde rozwiązanie")
+
+    # Sprawdź wymagania
+    requirements = check_system_requirements()
+
+    # Stwórz kompleksowy plik testowy
+    print(f"\n📧 Tworzenie kompleksowego pliku testowego...")
+    test_eml = create_comprehensive_test_eml()
+    with open('comprehensive_test.eml', 'w', encoding='utf-8') as f:
+        f.write(test_eml)
+    print("✅ Utworzono: comprehensive_test.eml")
+
+    # Test każdego podejścia
+    results = {}
+
+    # 1. Test wbudowanych bibliotek Python
+    results['builtin'] = test_builtin_python_approach()
+
+    # 2. Test zaawansowanej biblioteki
+    results['advanced'] = test_advanced_eml_parser()
+
+    # 3. Test Docker EMLRender
+    if requirements['Docker']:
+        results['docker_emlrender'] = test_docker_emlrender()
+    else:
+        print("\n⚠️ Pomijam test Docker EMLRender - Docker niedostępny")
+        results['docker_emlrender'] = False
+
+    # 4. Test własnego serwera
+    if requirements['Docker']:
+        results['custom_server'] = test_custom_docker_server()
+    else:
+        print("\n⚠️ Pomijam test własnego serwera - Docker niedostępny")
+        results['custom_server'] = False
+
+    # Podsumowanie wyników
+    print(f"\n📊 WYNIKI TESTÓW:")
+    print("=" * 60)
+    for test_name, success in results.items():
+        status = "✅ SUKCES" if success else "❌ BŁĄD"
+        test_display = {
+            'builtin': 'Wbudowane biblioteki Python',
+            'advanced': 'Zaawansowana biblioteka eml-parser',
+            'docker_emlrender': 'Docker EMLRender',
+            'custom_server': 'Własny serwer Docker'
+        }
+        print(f"{status} {test_display.get(test_name, test_name)}")
+
+    successful_tests = sum(results.values())
+    total_tests = len(results)
+    print(f"\n🎯 Wynik ogólny: {successful_tests}/{total_tests} testów przeszło pomyślnie")
+
+    # Rekomendacje
+    print_summary_and_recommendations()
+
+    # Posprzątaj
+    files_to_cleanup = ['comprehensive_test.eml', 'test_rendered.html']
+    for file in files_to_cleanup:
+        if os.path.exists(file):
+            os.remove(file)
+            print(f"🗑️ Usunięto: {file}")
+
+
+if __name__ == "__main__":
+    try:
+        run_comprehensive_demo()
+
+        print(f"\n🎉 DEMONSTRACJA ZAKOŃCZONA")
+        print("=" * 60)
+        print("📚 Sprawdź artefakty w tym czacie aby uzyskać pełny kod:")
+        print("   • eml_renderer_basic.py - Podstawowy renderer Python")
+        print("   • eml_advanced_parser.py - Zaawansowany parser z eml-parser")
+        print("   • docker_eml_setup.sh - Setup Docker EMLRender")
+        print("   • python_eml_client.py - Klient API Python")
+        print("   • eml_render_server.py - Własny serwer Flask")
+        print("   • Dockerfile + docker-compose.yml - Konfiguracja Docker")
+
+        print(f"\n💡 NASTĘPNE KROKI:")
+        print("1. Wybierz rozwiązanie odpowiednie dla Twoich potrzeb")
+        print("2. Zainstaluj wymagane zależności")
+        print("3. Przetestuj z własnymi plikami EML")
+        print("4. Dostosuj kod do swoich wymagań")
+
+    except KeyboardInterrupt:
+        print(f"\n\n⏹️ Demonstracja przerwana przez użytkownika")
+    except Exception as e:
+        print(f"\n\n❌ Błąd podczas demonstracji: {e}")
+        print("🔍 Sprawdź logi powyżej dla szczegółów")

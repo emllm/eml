@@ -1,15 +1,38 @@
-Content-Type: multipart/mixed; boundary="WEBAPP_BOUNDARY_12345"
+MIME-Version: 1.0
 From: system@example.com
 To: recipient@example.com
 Subject: WebApp - Faktury Maj 2025
 X-App-Type: docker-webapp
 X-App-Name: Faktury Maj 2025
 X-Generator: EML-Script-Generator
+Content-Type: multipart/mixed; boundary="WEBAPP_BOUNDARY_12345"
+
+--WEBAPP_BOUNDARY_12345
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: inline
+
 
 --WEBAPP_BOUNDARY_12345
 Content-Type: text/css; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 Content-ID: <style_css>
+Content-Disposition: inline; filename="style.css"
+
+                echo "Znaleziono plik CSS, wyodrębniam..."
+                mkdir -p extracted_content/css
+                sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+            echo "Content-Type: text/css; charset=utf-8" >> extracted_content/original.eml
+            echo "Content-Transfer-Encoding: quoted-printable" >> extracted_content/original.eml
+            echo "Content-ID: <style_css>" >> extracted_content/original.eml
+            echo "Content-Disposition: inline; filename=\"style.css\"" >> extracted_content/original.eml
+            echo "" >> extracted_content/original.eml
+            cat extracted_content/css/style.css >> extracted_content/original.eml
+            
+            # Dodaj JS
+            echo "" >> extracted_content/original.eml
+            echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
+Content-Type: text/css
 Content-Disposition: inline; filename="style.css"
 Content-Transfer-Encoding: quoted-printable
 
