@@ -39,30 +39,12 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     sed '1d;$d' > extracted_content/js/app.js
             fi
             
-            # Dodaj favicon
-            echo "Dodaję favicon..."
-            mkdir -p extracted_content/images
-            cat > extracted_content/images/favicon.svg << 'FAVICON'
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="6" fill="#4f46e5"/>
-  <path d="M16 8L20 12H12L16 8Z" fill="white"/>
-  <path d="M12 14H20V22H12V14Z" fill="white"/>
-  <path d="M8 24H24V26H8V24Z" fill="white"/>
-</svg>
-FAVICON
-            
             # Skopiuj oryginalny plik EML
             cp "$0" extracted_content/original.eml
             
             # Zaktualizuj ścieżki w pliku HTML
             sed -i 's|href="cid:style_css"|href="css/style.css"|g' extracted_content/index.html
             sed -i 's|src="cid:app_js"|src="js/app.js"|g' extracted_content/index.html
-            
-            # Dodaj link do favicon w head
-            if ! grep -q 'link.*favicon' extracted_content/index.html; then
-                sed -i '/<head>/a \    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">' extracted_content/index.html
-            fi
             
             echo "Zawartość wyodrębniona do katalogu extracted_content/"
             ls -la extracted_content/
