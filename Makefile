@@ -1,31 +1,61 @@
-# Project Makefile for PEML (Python Email Message Language)
+# Project Makefile for LLME (Large Language Model Email Message Language)
 
 # Project name
-PROJECT_NAME = peml
+PROJECT_NAME = llme
 
 # Poetry environment
 POETRY := poetry
 
 # Python paths
 PYTHON := $(shell $(POETRY) env info --path)/bin/python
+PYTHON_SRC := src/$(PROJECT_NAME)
 
-.PHONY: install test lint clean build publish docs start-server test-message
+.PHONY: install test lint clean build publish docs start-server test-message test-api test-cli
 
 # Install dependencies and package
 install:
 	$(POETRY) install
 
-# Run tests
+# Run all tests
 .PHONY: test
 test:
-	$(PYTHON) -m pytest tests/
+	$(PYTHON) -m pytest tests/ --cov=$(PYTHON_SRC) --cov-report=term-missing
+
+# Run API tests
+.PHONY: test-api
+test-api:
+	$(PYTHON) -m pytest tests/test_api.py
+
+# Run CLI tests
+.PHONY: test-cli
+test-cli:
+	$(PYTHON) -m pytest tests/test_cli.py
+
+# Run validator tests
+.PHONY: test-validator
+test-validator:
+	$(PYTHON) -m pytest tests/test_validator.py
 
 # Run linters
 .PHONY: lint
 lint:
+	$(PYTHON) -m black .
+	$(PYTHON) -m isort .
 	$(PYTHON) -m flake8 .
-	$(PYTHON) -m black --check .
-	$(PYTHON) -m isort --check .
+
+# Run type checking
+.PHONY: type-check
+type-check:
+	$(PYTHON) -m mypy .
+
+# Clean up
+.PHONY: clean
+clean:
+	rm -rf dist/
+	rm -rf .pytest_cache/
+	rm -rf .mypy_cache/
+	rm -rf .coverage
+	rm -rf htmlcov/
 
 # Build package
 .PHONY: build
@@ -36,7 +66,7 @@ build:
 .PHONY: publish
 publish:
 	$(POETRY) build
-	$(POETRY) publish --build
+	$(POETRY) publish --build --no-interaction --build
 
 # Generate documentation
 .PHONY: docs
@@ -58,3 +88,8 @@ start-server:
 .PHONY: test-message
 test-message:
 	$(PYTHON) -m peml.cli parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test\n\nHello World"
+
+# Run full test suite
+.PHONY: test-all
+test-all: lint type-check test
+	echo "All tests passed!"

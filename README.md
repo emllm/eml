@@ -1,41 +1,21 @@
-# eml 
+# LLME (Large Language Model Email Message Language)
 
-## AI LLM Email Distribution: Analiza koncepcji i implementacji
+LLME to zaawansowany system do dystrybucji oprogramowania generowanego przez AI, wykorzystujący infrastrukturę email jako protokół transportu. System łączy możliwości Large Language Models z tradycyjną infrastrukturą email, umożliwiając automatyczną dystrybucję dynamicznie generowanego kodu/aplikacji.
 
-**Email jako protokół dystrybucji oprogramowania generowanego przez AI** to koncepcja łącząca możliwości Large Language Models (LLM) z tradycyjną infrastrukturą email.
-Idea polega na automatycznej dystrybucji dynamicznie generowanego kodu/aplikacji bezpośrednio przez SMTP, wykorzystując email jako medium transportu i metadanych.
+## 📚 Dokumentacja
 
-### Kluczowe elementy systemu:
+Pełna dokumentacja dostępna w katalogu [docs/](docs/):
 
-- **LLM Generator**: AI model generujący kod na żądanie
-- **SMTP Server**: Serwer email jako kanał dystrybucji  
-- **Webhook Interface**: API do triggering generacji i wysyłki
-- **Metadata Packaging**: Automatyczne tworzenie samorozpakowujących się pakietów
-- **Email Parsing**: Automatyczne wyodrębnianie i wykonywanie załączników
+- [Instalacja](docs/installation/index.md)
+- [Użycie](docs/usage/index.md)
+- [API](docs/api/index.md)
+- [Architektura](docs/architecture/index.md)
+- [Przykłady](docs/examples/index.md)
 
-## Wady i zalety modelu
+## 🛠️ Instalacja
 
-### ✅ **Zalety**
-
-**Infrastruktura email jest uniwersalna:**
-- Każda organizacja ma już działający system email
-- Brak potrzeby dodatkowych narzędzi deployment
-- Naturalna kompatybilność z istniejącymi workflow
-
-**AI-driven personalizacja:**
-- Kod generowany on-demand na podstawie specyfikacji
-- Dynamiczne dostosowanie do środowiska użytkownika
-- Automatyczne uwzględnienie dependencies i konfiguracji
-
-**Asynchroniczna dystrybucja:**
-- Brak blocking operations podczas generacji
-- Kolejkowanie requestów w SMTP queue
-- Scalability przez distributed email servers
-
-**Audit trail i wersjonowanie:**
-- Naturalny system logowania przez email history
-- Możliwość rollback przez resend starszych wersji
-- Compliance z corporate email policies
+```bash
+pip install llme
 
 **Zero-dependency deployment:**
 - Brak potrzeby CI/CD pipeline'ów
@@ -288,7 +268,22 @@ System składa się z trzech głównych komponentów:
 
 # Uniwersalne launchery dla różnych platform
 
-## 📁 Struktura plików do dystrybucji
+## 📁 Struktura projektu
+
+```
+llme/
+├── src/
+│   └── llme/
+│       ├── __init__.py
+│       ├── api.py
+│       ├── core.py
+│       ├── cli.py
+│       └── validator.py
+├── tests/
+├── pyproject.toml
+├── Makefile
+└── README.md
+```
 
 ```
 universal-webapp/
@@ -881,9 +876,25 @@ python faktury-maj.eml.py [komenda]
 | `info` | Pokaż informacje o pliku | `python3 faktury-maj.eml.py info` |
 | `help` | Wyświetl pomoc | `python3 faktury-maj.eml.py help` |
 
+## 🛠️ Instalacja
+
+### Z PyPI
+
+```bash
+pip install llme
+```
+
+### Z źródeł
+
+```bash
+git clone https://github.com/tomsapletta/llme.git
+cd llme
+poetry install
+```
+
 ## 💻 Wymagania systemowe
 
-- **Python 3.6+** (standardowo dostępny)
+- **Python 3.8+** (standardowo dostępny)
 - **Docker** (opcjonalnie, tylko dla komendy `run`)
 - **Przeglądarka** (dowolna nowoczesna)
 

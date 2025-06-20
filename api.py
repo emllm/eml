@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Body
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from .core import PEMLParser, PEMLError
-from .validator import PEMLValidator
+from llme.core import PEMLParser, PEMLError
+from llme.validator import PEMLValidator
 import json
 import logging
 
