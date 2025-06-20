@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Faktury</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Dashboard Faktur</h1>
+        <div class="stats">
+            <div class="card">
+                <h3>Wszystkie faktury</h3>
+                <span class="number">24</span>
+            </div>
+            <div class="card">
+                <h3>Opłacone</h3>
+                <span class="number">18</span>
+            </div>
+            <div class="card">
+                <h3>Oczekujące</h3>
+                <span class="number">6</span>
+            </div>
+        </div>
+
+        <div class="invoice-list">
+            <div class="invoice-item">
+                <img src="invoice-thumb.jpg" alt="Faktura" class="thumb">
+                <div class="info">
+                    <h4>Faktura #2025/001</h4>
+                    <p>ABC Company</p>
+                    <span class="amount">1,250 PLN</span>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="showAlert()">Test JavaScript</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
