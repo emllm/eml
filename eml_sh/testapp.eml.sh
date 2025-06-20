@@ -13,6 +13,12 @@ Date: Wed, 21 Jun 2025 10:00:00 +0000
 # 2. Płynym plikiem EML z załącznikami
 #
 
+# Skip email headers if present
+if [ "$1" = "Content-Type:" ] || [ "$1" = "From:" ] || [ "$1" = "To:" ] || [ "$1" = "Subject:" ] || [ "$1" = "Date:" ]; then
+    # This is being called with email headers, skip execution
+    exit 0
+fi
+
 # Znajdź i wykonaj tylko część bashową
 if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "info" ]; then
     # Przetwarzanie argumentów
@@ -177,7 +183,7 @@ EOM
             UPDATED_HTML=$(echo "$HTML_CONTENT" | \
                 sed 's|href="cid:style_css"|href="style.css"|g' | \
                 sed 's|src="cid:script_js"|src="app.js"|g' | \
-                sed 's|href="cid:favicon_svg"|href="favicon.svg"|g'))
+                sed 's|href="cid:favicon_svg"|href="favicon.svg"|g')
             
             # Add favicon link if it doesn't exist
             if ! echo "$UPDATED_HTML" | grep -q 'link.*favicon'; then

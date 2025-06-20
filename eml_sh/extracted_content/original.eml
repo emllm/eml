@@ -87,11 +87,11 @@ Content-Disposition: inline; filename="style.css"
 
 EOM
                 # Add CSS content
-                cat extracted_content/style.css >> "$TMP_EML"
+                cat "$EXTRACTED_DIR/style.css" >> "$TMP_EML"
             fi
             
             # Add JavaScript part if exists
-            if [ -f "extracted_content/app.js" ]; then
+            if [ -f "$EXTRACTED_DIR/app.js" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -102,11 +102,11 @@ Content-Disposition: inline; filename="app.js"
 
 EOM
                 # Add JavaScript content
-                cat extracted_content/app.js >> "$TMP_EML"
+                cat "$EXTRACTED_DIR/app.js" >> "$TMP_EML"
             fi
             
             # Add favicon if exists
-            if [ -f "extracted_content/favicon.svg" ]; then
+            if [ -f "$EXTRACTED_DIR/favicon.svg" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -116,7 +116,7 @@ Content-ID: <favicon_svg>
 Content-Disposition: inline; filename="favicon.svg"
 
 EOM
-                base64 < extracted_content/favicon.svg >> "$TMP_EML"
+                base64 < "$EXTRACTED_DIR/favicon.svg" >> "$TMP_EML"
             fi
             
             # Close boundaries
