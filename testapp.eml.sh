@@ -8,176 +8,7 @@
 # 2. Płynym plikiem EML z załącznikami
 #
 
-# Jeśli uruchomiono jako skrypt, obsłuż parametry
-if [ "$0" = "${BASH_SOURCE[0]}" ]; then
-    ACTION="${1:-browse}"
-    SCRIPT_FILE="$0"
-    TEMP_DIR="/tmp/webapp_$$"
-
-    case "$ACTION" in
-        "extract")
-            echo "Wyodrębnianie plików z EML..."
-            mkdir -p "$TEMP_DIR"
-
-            # Znajdź początek EML (po komentarzach bash)
-            EML_START=$(grep -n "^MIME-Version:" "$SCRIPT_FILE" | head -1 | cut -d: -f1)
-
-            # Wyodrębnij część EML i przetwórz
-            tail -n +$EML_START "$SCRIPT_FILE" > "$TEMP_DIR/content.eml"
-
-            # Użyj Python do parsowania EML
-            python3 -c "
-import email
-import os
-import sys
-import base64
-import json
-
-print('=== Debug: Starting EML parsing ===')
-print('Opening file: ' + os.path.abspath('$TEMP_DIR/content.eml'))
-
-with open('$TEMP_DIR/content.eml', 'rb') as f:
-    msg = email.message_from_binary_file(f)
-    print('Message type: ' + str(type(msg)))
-    print('Message headers: ' + str(dict(msg.items())))
-
-    extracted = []
-    for part in msg.walk():
-        print('\n=== Part Info ===')
-        print('Content type: ' + part.get_content_type())
-        print('Content disposition: ' + str(part.get('content-disposition')))
-        print('Filename: ' + str(part.get_param('filename', header='content-disposition')))
-
-        if part.get_content_maintype() == 'multipart':
-            print('Skipping multipart')
-            continue
-
-        filename = part.get_param('filename', header='content-disposition')
-        if not filename:
-            content_type = part.get_content_type()
-            print('No filename, using content type: ' + content_type)
-            if content_type == 'text/html':
-                filename = 'index.html'
-            elif content_type == 'text/css':
-                filename = 'style.css'
-            elif content_type == 'application/javascript':
-                filename = 'script.js'
-            elif 'dockerfile' in content_type.lower():
-                filename = 'Dockerfile'
-            else:
-                print('Unknown content type: ' + content_type)
-                continue
-
-        filepath = os.path.join('$TEMP_DIR', filename)
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-
-        try:
-            content = part.get_payload(decode=True)
-            if content is None:
-                content = part.get_payload().encode('utf-8')
-
-            with open(filepath, 'wb') as f:
-                f.write(content)
-
-            extracted.append(filename)
-            print('✓ ' + filename + ' (' + str(len(content)) + ' bytes)')
-
-        except Exception as e:
-            print('✗ Error extracting ' + filename + ': ' + str(e))
-            import traceback
-            print('Traceback:')
-            print(traceback.format_exc())
-
-print('\n=== Final Summary ===')
-print('Extracted to: ' + os.path.abspath('$TEMP_DIR'))
-print('Extracted files: ' + json.dumps(extracted, indent=2))
-print('=== End of EML parsing ===')
-"
-            ;;
-
-        "run")
-            echo "Uruchamianie jako Docker container..."
-            $0 extract
-
-            if [ -f "$TEMP_DIR/Dockerfile" ]; then
-                cd "$TEMP_DIR"
-                docker build -t "webapp-$(basename $0 .eml.sh)" .
-                echo "Starting container on http://localhost:8080"
-                docker run --rm -p 8080:80 "webapp-$(basename $0 .eml.sh)"
-            else
-                echo "Błąd: Brak Dockerfile w EML"
-                exit 1
-            fi
-            ;;
-
-        "browse")
-            echo "Otwieranie w przeglądarce..."
-            $0 extract
-
-            # Sprawdź najpierw w katalogu bieżącym
-            if [ -f "index.html" ]; then
-                echo "Znaleziono index.html w katalogu bieżącym"
-                
-                # Zamień Content-ID references na lokalne pliki
-                python3 -c "
-import re
-import os
-
-html_file = 'index.html'
-with open(html_file, 'r', encoding='utf-8') as f:
-    content = f.read()
-
-# Zamień cid: references na lokalne pliki
-content = re.sub(r'src=[\"\']cid:([^\"\'>]+)[\"\']', r'src=\"\1\"', content)
-content = re.sub(r'href=[\"\']cid:([^\"\'>]+)[\"\']', r'href=\"\1\"', content)
-
-# Dodać ścieżki do wszystkich plików
-content = re.sub(r'<link rel=\"stylesheet\" href=\"([^\"]+)\"', r'<link rel=\"stylesheet\" href=\"./\1\"', content)
-
-with open(html_file, 'w', encoding='utf-8') as f:
-    f.write(content)
-
-                # Otwórz w przeglądarce
-                if command -v xdg-open > /dev/null; then
-                    xdg-open "file://$PWD/index.html"
-                elif command -v open > /dev/null; then
-                    open "file://$PWD/index.html"
-                else
-                    echo "Otwórz w przeglądarce: file://$PWD/index.html"
-            else
-                echo "Błąd: Brak index.html w EML"
-                exit 1
-            fi
-            ;;
-
-        "info")
-            echo "Informacje o aplikacji:"
-            echo "Nazwa: $(grep -m 1 'X-App-Name:' "$SCRIPT_FILE" | cut -d: -f2-)"
-            echo "Typ: $(grep -m 1 'X-App-Type:' "$SCRIPT_FILE" | cut -d: -f2-)"
-            echo "Generator: $(grep -m 1 'X-Generator:' "$SCRIPT_FILE" | cut -d: -f2-)"
-            ;;
-
-        *)
-            echo "Użycie: $0 [extract|run|browse|info]"
-            echo ""
-            echo "Komendy:"
-            echo "  extract  - Wyodrębnij pliki do /tmp"
-            echo "  run      - Uruchom jako Docker container"
-            echo "  browse   - Otwórz w przeglądarce"
-            echo "  info     - Pokaż informacje o pliku"
-            exit 1
-            ;;
-    esac
-
-    exit 0
-fi
-
-# ====================================================================
-# PONIŻEJ ZACZYNA SIĘ CZĘŚĆ EML
-# Ten kod nigdy nie będzie wykonany jako bash, ale będzie interpretowany
-# jako prawidłowy plik EML przez email clients i parsery MIME
-# ====================================================================
-
+# EML content starts here
 MIME-Version: 1.0
 Subject: WebApp - Faktury Maj 2025
 Content-Type: multipart/mixed; boundary="WEBAPP_BOUNDARY_12345"
@@ -186,9 +17,9 @@ X-App-Name: Faktury Maj 2025
 X-Generator: EML-Script-Generator
 
 --WEBAPP_BOUNDARY_12345
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html
 Content-Disposition: inline; filename="index.html"
+Content-Transfer-Encoding: quoted-printable
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -249,9 +80,8 @@ Content-Disposition: inline; filename="index.html"
 
 --WEBAPP_BOUNDARY_12345
 Content-Type: text/css
-Content-ID: <style_css>
-Content-Transfer-Encoding: quoted-printable
 Content-Disposition: inline; filename="style.css"
+Content-Transfer-Encoding: quoted-printable
 
 * {
     margin: 0;

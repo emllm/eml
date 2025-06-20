@@ -17,18 +17,14 @@ Ten plik jest jednocześnie:
 
 import sys
 import os
-import platform
 import tempfile
 import webbrowser
 import subprocess
 import email
-import base64
-import re
-import json
-from email.mime.multipart import MIMEMultipart
-from pathlib import Path
+import mimetypes
 import shutil
-
+import platform
+from pathlib import Path
 
 # Uniwersalne funkcje pomocnicze
 def get_platform():
@@ -86,6 +82,7 @@ def open_file_browser(path):
 def check_docker():
     """Sprawdź czy Docker jest dostępny"""
     try:
+        import platform
         result = subprocess.run(['docker', '--version'],
                                 capture_output=True, text=True, check=False)
         return result.returncode == 0
@@ -94,130 +91,228 @@ def check_docker():
 
 
 def extract_eml_content(script_path):
-    """Wyodrębnij zawartość EML z pliku skryptu"""
+    """
+    Wyodrębnij zawartość EML z pliku skryptu
+    
+    Args:
+        script_path (str): Ścieżka do pliku skryptu .py lub .eml
+        
+    Returns:
+        tuple: (ścieżka_do_pliku_eml, katalog_z_plikami)
+    """
     temp_dir = tempfile.mkdtemp(prefix='webapp_')
     extracted_files = []
 
     try:
-        # Read the file as binary to preserve all content
+        print("\u2709 Wyszukiwanie zawartości EML w pliku...")
+        
+        # Read the input file as binary to avoid encoding issues
         with open(script_path, 'rb') as f:
             content = f.read()
-
-        # Find the EML section start (after Python comments)
-        # Look for the MIME-Version header with potential whitespace/newline before it
-        eml_start = content.find(b'MIME-Version: 1.0')
-        if eml_start == -1:
-            # Try with newline before MIME-Version
-            eml_start = content.find(b'\nMIME-Version: 1.0')
-            if eml_start != -1:
-                eml_start += 1  # Skip the newline
+        
+        # Convert to string for searching
+        try:
+            content_str = content.decode('utf-8')
+        except UnicodeDecodeError:
+            content_str = content.decode('latin-1')
+        
+        # Look for the EML content marker
+        eml_marker = '# ===================================================================='
+        eml_start = content_str.find(eml_marker)
         
         if eml_start == -1:
-            raise ValueError("Nie znaleziono sekcji EML w pliku")
-
+            raise ValueError("Nie znaleziono znacznika początku zawartości EML w pliku")
+        
+        # Find the start of the EML content (after the marker and any whitespace)
+        eml_content_start = content_str.find('MIME-Version: 1.0', eml_start)
+        if eml_content_start == -1:
+            # Try with triple quotes
+            eml_content_start = content_str.find('"""\nMIME-Version: 1.0', eml_start)
+            if eml_content_start != -1:
+                eml_content_start += 3  # Skip the triple quote and newline
+        
+        if eml_content_start == -1:
+            raise ValueError("Nie udało się zlokalizować zawartości EML w pliku")
+        
         # Extract the EML content
-        eml_content = content[eml_start:]
-
-        # Save EML to a temporary file
-        eml_file = os.path.join(temp_dir, 'content.eml')
-        with open(eml_file, 'wb') as f:
+        eml_content = content_str[eml_content_start:]
+        
+        # Look for the end of the EML content (before the closing triple quotes or boundary)
+        eml_end = eml_content.rfind('--UNIVERSAL_WEBAPP_BOUNDARY--')
+        if eml_end == -1:
+            eml_end = eml_content.rfind('"""')
+        
+        if eml_end != -1:
+            eml_content = eml_content[:eml_end].strip()
+        
+        # Ensure we have a proper MIME-Version header at the start
+        if not eml_content.startswith('MIME-Version'):
+            mime_pos = eml_content.find('MIME-Version: 1.0')
+            if mime_pos != -1:
+                eml_content = eml_content[mime_pos:]
+            else:
+                # If we can't find MIME-Version, add a default header
+                eml_content = 'MIME-Version: 1.0\n' + eml_content
+        
+        # Save the EML content to a temporary file
+        eml_file = os.path.join(temp_dir, 'extracted.eml')
+        with open(eml_file, 'w', encoding='utf-8') as f:
             f.write(eml_content)
+        
+        print(f"✅ Zapisano EML do: {eml_file}")
+        
+        # Also save a copy as content.eml for backward compatibility
+        shutil.copy2(eml_file, os.path.join(temp_dir, 'content.eml'))
+        
+        # Now extract the files from the EML
+        extracted_files = extract_from_eml(eml_file, temp_dir)
+        
+        # Verify extraction
+        if not extracted_files:
+            print("⚠ Nie wyodrębniono żadnych plików z EML!")
+            # Try to read the EML file directly
+            with open(eml_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                print(f"\nZawartość EML (pierwsze 500 znaków):\n{content[:500]}...")
+        else:
+            print(f"\n✅ Pomyślnie wyodrębniono {len(extracted_files)} plików:")
+            for i, file_info in enumerate(extracted_files, 1):
+                print(f"{i}. {file_info['name']} ({file_info['size']} bytes, {file_info['content_type']})")
+        
+        return eml_file, temp_dir
+        
+    except Exception as e:
+        print(f" Błąd podczas wyodrębniania zawartości EML: {e}")
+        raise
 
-        # Parse EML using email library
-        with open(eml_file, 'rb') as f:
-            msg = email.message_from_binary_file(f)
-
-        # If it's a multipart message, process each part
-        if msg.is_multipart():
-            for part in msg.walk():
-                # Skip multipart container
-                if part.get_content_maintype() == 'multipart':
-                    continue
-
-                # Get filename from headers or generate one
-                filename = part.get_filename()
-                content_type = part.get_content_type()
-                content_id = part.get('Content-ID', '').strip('<>')
+def extract_from_eml(eml_file, output_dir):
+    """
+    Extract files from an EML file
+    
+    Args:
+        eml_file (str): Path to the EML file to extract from
+        output_dir (str): Directory to extract files to
+        
+    Returns:
+        list: List of dictionaries containing information about extracted files
+    """
+    extracted_files = []
+    
+    try:
+        print(f"\n🔍 Analizowanie pliku EML: {eml_file}")
+        
+        # First try to parse the EML file
+        with open(eml_file, 'r', encoding='utf-8') as f:
+            msg = email.message_from_file(f)
+            
+        # If parsing fails, try reading as bytes
+        if not msg:
+            print("⚠ Nie udało się sparsować jako tekst, próbuję jako dane binarne...")
+            with open(eml_file, 'rb') as f:
+                msg = email.message_from_binary_file(f)
+        
+        if not msg:
+            raise ValueError("Nie udało się sparsować pliku EML")
+            
+        print(f"\nPomyślnie sparsowano wiadomość EML (typ: {msg.get_content_type()})")
+        
+        # Print message structure for debugging
+        print("\nStruktura wiadomości:")
+        print(f"- Typ: {type(msg)}")
+        print(f"- Czy multipart: {msg.is_multipart()}")
+        
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Process all parts of the message
+        for part in msg.walk():
+            # Skip multipart container parts
+            if part.get_content_maintype() == 'multipart':
+                print(f"\nPomijam kontener multipart: {part.get_content_type()}")
+                continue
                 
-                if not filename:
-                    # Try to determine filename from Content-Type and Content-ID
-                    if content_type == 'text/html':
-                        filename = 'index.html'
-                    elif content_type == 'text/css':
-                        filename = 'style.css'
-                    elif content_type == 'application/javascript':
-                        filename = 'script.js'
-                    elif content_type == 'text/plain' and 'dockerfile' in (part.get_payload() or '').lower()[:100]:
-                        filename = 'Dockerfile'
-                    elif content_type == 'application/json':
-                        filename = 'metadata.json'
-                    elif content_type.startswith('image/'):
-                        ext = content_type.split('/')[-1]
-                        filename = f'image_{content_id}.{ext}'
-                    else:
-                        # Generate a generic name if we can't determine the type
-                        filename = f'file_{len(extracted_files)}.bin'
+            content_type = part.get_content_type()
+            content_disposition = part.get("Content-Disposition", "")
+            
+            # Get filename from headers or generate one
+            filename = part.get_filename()
+            if not filename and 'filename=' in content_disposition:
+                # Extract filename from Content-Disposition if available
+                filename = content_disposition.split('filename=')[1].strip('"\'')
+            
+            if not filename:
+                # Generate a filename based on content type or part number
+                ext = mimetypes.guess_extension(content_type) or '.bin'
+                filename = f'part-{len(extracted_files)}{ext}'
+            
+            # Clean up filename
+            filename = os.path.basename(filename).strip()
+            if not filename:
+                filename = f'part-{len(extracted_files)}.bin'
+            
+            # Save the file
+            filepath = os.path.join(output_dir, filename)
+            try:
+                # Get the payload, handling both binary and text content
+                payload = part.get_payload(decode=True)
+                if payload is None:
+                    payload = part.get_payload()
+                    if isinstance(payload, str):
+                        payload = payload.encode('utf-8')
                 
-                # Clean up filename
-                if isinstance(filename, bytes):
-                    filename = filename.decode('utf-8', errors='replace')
-                filename = os.path.basename(filename)  # Remove any path components
-                if not filename:
-                    continue
-                    
-                # Save the file
-                file_path = os.path.join(temp_dir, filename)
-                try:
-                    # Get the payload
-                    payload = part.get_payload(decode=True)
-                    if payload is None:
-                        payload = part.get_payload()
-                        if isinstance(payload, str):
-                            payload = payload.encode('utf-8')
-                    
+                if payload:
                     # Ensure the directory exists
-                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                    os.makedirs(os.path.dirname(filepath), exist_ok=True)
                     
                     # Write the file
-                    with open(file_path, 'wb') as f:
+                    with open(filepath, 'wb') as f:
                         f.write(payload)
                     
-                    # Add to extracted files list
-                    file_size = os.path.getsize(file_path)
+                    # Get file size and add to extracted files list
+                    file_size = os.path.getsize(filepath)
                     extracted_files.append({
                         'name': filename,
-                        'path': file_path,
+                        'path': filepath,
                         'size': file_size,
                         'content_type': content_type
                     })
                     
                     print(f"✅ {filename} ({file_size} bytes, {content_type})")
-                    
-                except Exception as e:
-                    print(f"❌ Błąd przy zapisie pliku {filename} ({content_type}): {e}")
-        else:
-            # Handle non-multipart messages
-            filename = msg.get_filename() or 'content.bin'
-            file_path = os.path.join(temp_dir, filename)
-            with open(file_path, 'wb') as f:
-                f.write(msg.get_payload(decode=True))
-            
-            file_size = os.path.getsize(file_path)
-            extracted_files.append({
-                'name': filename,
-                'path': file_path,
-                'size': file_size,
-                'content_type': msg.get_content_type()
-            })
-            print(f"✅ {filename} ({file_size} bytes, {msg.get_content_type()})")
-
-        print(f"\n📁 Wyodrębniono {len(extracted_files)} plików do: {temp_dir}")
-        return temp_dir, extracted_files
-
+                
+            except Exception as e:
+                print(f"❌ Błąd podczas zapisywania pliku {filename}: {e}")
+                continue
+        
+        if not extracted_files and not msg.is_multipart():
+            # Handle non-multipart messages that didn't match our extraction logic
+            try:
+                filename = msg.get_filename() or 'content.bin'
+                filepath = os.path.join(output_dir, filename)
+                
+                payload = msg.get_payload(decode=True) or msg.get_payload()
+                if isinstance(payload, str):
+                    payload = payload.encode('utf-8')
+                
+                with open(filepath, 'wb') as f:
+                    f.write(payload)
+                
+                file_size = os.path.getsize(filepath)
+                extracted_files.append({
+                    'name': filename,
+                    'path': filepath,
+                    'size': file_size,
+                    'content_type': msg.get_content_type()
+                })
+                print(f"✅ {filename} ({file_size} bytes, {msg.get_content_type()})")
+            except Exception as e:
+                print(f"❌ Błąd podczas zapisywania głównej zawartości: {e}")
+        
+        print(f"\n📁 Wyodrębniono {len(extracted_files)} plików do: {output_dir}")
+        return extracted_files
+        
     except Exception as e:
         print(f"❌ Błąd podczas przetwarzania pliku EML: {e}")
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise e
+        raise
 
 
 def action_extract(script_path):
@@ -245,12 +340,19 @@ def action_run(script_path):
         print("  Linux: sudo apt install docker.io")
         return
 
-    temp_dir, files = extract_eml_content(script_path)
-
-    # Sprawdź czy istnieje Dockerfile
-    dockerfile_path = os.path.join(temp_dir, 'Dockerfile')
-    if not os.path.exists(dockerfile_path):
-        print("❌ Brak Dockerfile w EML")
+    eml_file, temp_dir = extract_eml_content(script_path)
+    
+    # Look for Dockerfile in the extracted files
+    dockerfile_path = None
+    for root, _, files in os.walk(temp_dir):
+        if 'Dockerfile' in files:
+            dockerfile_path = os.path.join(root, 'Dockerfile')
+            break
+    
+    if not dockerfile_path or not os.path.exists(dockerfile_path):
+        print("❌ Brak Dockerfile w wyodrębnionych plikach")
+        print(f"Przeszukiwano w: {temp_dir}")
+        print(f"Zawartość katalogu: {os.listdir(temp_dir)}")
         return
 
     # Buduj obraz Docker

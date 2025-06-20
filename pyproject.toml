@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "peml"
+version = "0.1.1"
+description = "Python Email Message Language registry and interpreter"
+authors = ["Tom Sapletta <info@softreck.dev>"]
+packages = [{include = "eml"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fastapi = "^0.104.1"
+uvicorn = "^0.24.0"
+pydantic = "^2.4.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,972 @@
+model komunikacji za pomocą servera i klienta email, nadawcy piszącego text2app oczekiwania jaka chce otrzymac aplikacje i nadawcy LLM odpisującego w formacie eml aplikajce, ktora moze uruchomic klietn email z automatycznycm deploymentem.
+
+stworz docker + groovy + apache camel z osblugą pipeline dla procesowania danych z email,
+kazda wiaodmosc ma byc odczytywana  i procesowana przez LLM i odpisywana wiadomossc z LLM jako multipart aplikacja w postaci eml do uruchomienia po stronie klienta
+zrob automatyczny deployment tej wiadomosci zaraz jak przyjdzie do usera poprzez specjalny klient  z docker + groovy + apache camel do odbierania wiadomosci i deploymentu
+
+dodaj BOT generator aplikacji co 1 minute wysyłaj losową wiadomość EMAIL z posrod 3 zdan: zadan co ma byc za aplikacja wygenerowaana 
+dodaj auto deployer,  po stronie klienta, ktory ma otrzymac wygenerowa aplikacje w postaci eml wiadomosci i ją deployować na maszynie lokalnej 
+
+
+lub plik html, gdzie pobiera wiadomosc i przetwarza
+
+procesowanie danych z EMAIl poprzez intermediator porzmiedyzy LLM a server,
+apache laczy sie z ollama i odpowiada gdy user wysyala wiadomosc
+
+implementacja w docker + dockrc compose z prosta implementacja z klietnem w przegladarce z przykladami wysylania
+i implementacja eml jako jako aplikacji python i uruchomieniem
+
+
+
+
++ dodaj klient webowy, aby rpzegladac historie konwersacji
++ .env z konfiguracja wszytskich zmiennych
++ health do tetsowania usług
++ poprawne prompty, aby generowac odpowiednii format  pliku,
++ mock z generowaniem poprawnego wzorcowego eml z załącznikami
++ client, do geenrowania poprawnego prompta z eml
++ deployer bot do uruchomienia zaraz po odebraniu
+
+
+
+
+
+
+
+
+
+
+### 🧠 Projekt: **EMLLM - Dystrybucja Aplikacji przez Email z LLM**
+
+---
+
+## 📌 **Cel projektu**
+
+Stworzenie kompletnego systemu, który umożliwia:
+
+* Odbieranie żądań wygenerowania aplikacji (w formie emaila).
+* Przetwarzanie tych żądań przez LLM.
+* Wysyłanie gotowej aplikacji jako `.eml` (email z załącznikiem aplikacji).
+* Automatyczny odbiór i **deployment** aplikacji po stronie klienta.
+
+---
+
+## ⚙️ **Zasada działania (krok po kroku)**
+
+### 1. 🧾 **Bot wysyła zadanie**
+
+* Co minutę **bot-generator** wysyła email na adres `llm@local` z losowym poleceniem:
+
+  * np. „Stwórz dashboard w Node.js”.
+
+### 2. 🤖 **LLM przetwarza wiadomość**
+
+* Kontener **camel-server** odbiera email z IMAP.
+* Symuluje przetworzenie przez LLM (np. lokalnie przez Ollama z Mistral 7B).
+* Tworzy wiadomość zwrotną `.eml` z aplikacją (jako załącznik `zip`), zbudowaną na podstawie promptu.
+* Wysyła odpowiedź do `user@local` przez SMTP.
+
+### 3. 💾 **Email z aplikacją**
+
+* Wiadomość `.eml` zawiera:
+
+  * Treść emaila: "Here is your generated application".
+  * Załącznik: `app.zip`, zawierający wygenerowany kod (np. `run.sh`, `index.html`, `app.py` itp.).
+
+### 4. ⚡ **Automatyczny deployment**
+
+* Klient (`client-agent`) nasłuchuje swoją skrzynkę mailową (IMAP).
+* Po otrzymaniu `.eml`:
+
+  * Wyciąga załącznik ZIP,
+  * Rozpakowuje aplikację do `/opt/emllm/app`,
+  * Jeśli istnieje `run.sh` – automatycznie go uruchamia.
+
+---
+
+## 🧱 **Architektura techniczna**
+
+### 🔗 Komponenty (Docker Compose)
+
+| Nazwa           | Opis                                                                 |
+| --------------- | -------------------------------------------------------------------- |
+| `mailhog`       | Email server (SMTP/IMAP) dla przesyłu wiadomości                     |
+| `bot-generator` | Wysyła prompty do LLM jako wiadomości email                          |
+| `camel-server`  | Serwer Apache Camel przetwarzający emaile i generujący `.eml` z app  |
+| `client-agent`  | Klient, który odbiera `.eml` i uruchamia aplikację                   |
+| `ollama`        | (Opcjonalnie) Lokalny LLM Mistral 7B – do generowania kodu aplikacji |
+
+---
+
+## 📄 **Format wiadomości (EML)**
+
+* Typ: `multipart/mixed`
+* Część 1: tekst (treść wiadomości)
+* Część 2: załącznik `.zip` (aplikacja)
+* Kodowane jako base64
+
+> Jest to bezpieczny, standardowy sposób formatowania wiadomości email, porównywalny do renderowania HTML/Markdown w przeglądarce – tyle że z dodatkowymi warstwami bezpieczeństwa i automatyzacji.
+
+---
+
+## 🔒 **Bezpieczeństwo**
+
+* Każda wiadomość może być analizowana przez LLM przed deploymentem.
+* Sandbox deployment (katalog `/opt/emllm/app`).
+* Ograniczenie do znanych domen i adresów email.
+* Możliwość dodania podpisów i whitelist.
+
+---
+
+## 🛠️ **Technologie**
+
+* **Docker + Docker Compose**
+* **Groovy + Apache Camel** (do routingu emaili)
+* **JavaMail API**
+* **OLLAMA + Mistral Code 7B** (lokalne LLM)
+* **Linux + Shell** (rozpakowanie, uruchamianie aplikacji)
+
+---
+
+## 🧪 **Zastosowania**
+
+* Dystrybucja aplikacji bez potrzeby CI/CD
+* Edukacja i szybkie prototypowanie
+* Dystrybucja kodu offline lub w środowiskach izolowanych
+* Systemy kryzysowe i niezależne deploymenty
+
+---
+
+## ✅ **Podsumowanie**
+
+Ten projekt to **most między klasycznym kanałem komunikacji (email)** a nowoczesną dystrybucją aplikacji **generowaną przez AI**. Pokazuje, jak w prosty, asynchroniczny sposób zrealizować **Text-to-App** bez dedykowanej infrastruktury DevOps.
+
+> 📧 Email + 🤖 LLM + 🐳 Docker = 📦 Automatyczny System Dystrybucji Aplikacji
+
+
+
+
+
+
+# Now we fill in the contents of each file
+
+# docker-compose.yml
+docker_compose = """
+version: '3.9'
+
+services:
+  email-server:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  camel-server:
+    build: ./camel-server
+    depends_on:
+      - email-server
+      - ollama
+
+  client-agent:
+    build: ./client-agent
+    depends_on:
+      - email-server
+
+  bot-generator:
+    build: ./bot-generator
+    depends_on:
+      - email-server
+
+volumes:
+  ollama_data:
+"""
+
+# camel-server Dockerfile
+camel_dockerfile = """
+FROM groovy:4.0
+RUN groovy -version
+WORKDIR /app
+COPY src /app/src
+CMD ["groovy", "/app/src/AppRouter.groovy"]
+"""
+
+# client-agent Dockerfile
+client_dockerfile = """
+FROM groovy:4.0
+WORKDIR /app
+COPY src /app/src
+CMD ["groovy", "/app/src/DeployRouter.groovy"]
+"""
+
+# bot-generator Dockerfile
+bot_dockerfile = """
+FROM groovy:4.0
+WORKDIR /bot
+COPY src /bot/src
+CMD ["groovy", "/bot/src/main.groovy"]
+"""
+
+# camel-server AppRouter.groovy
+app_router_code = """
+@Grab('org.apache.camel:camel-core:3.21.0')
+@Grab('org.apache.camel:camel-mail:3.21.0')
+import org.apache.camel.builder.RouteBuilder
+import org.apache.camel.impl.DefaultCamelContext
+
+def ctx = new DefaultCamelContext()
+ctx.addRoutes(new RouteBuilder() {
+    void configure() {
+        from('imap://llm@local@email-server:143?username=llm@local&password=llm&delete=false&consumer.delay=5000')
+        .process {
+            def text = it.in.body.toString()
+            def filename = "app_${System.currentTimeMillis()}.zip"
+            def fileContent = "echo Hello > /tmp/hello.txt" // Simulated application content
+            def zipFile = new File("/tmp/" + filename)
+            zipFile.text = fileContent
+            def emlContent = '''Content-Type: multipart/mixed; boundary="EMLLM"
+Content-Transfer-Encoding: 7bit
+
+--EMLLM
+Content-Type: text/plain
+
+Here is your generated application.
+
+--EMLLM
+Content-Type: application/zip
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="app.zip"
+
+''' + zipFile.bytes.encodeBase64().toString() + '''
+--EMLLM--'''
+
+            it.in.setBody(emlContent)
+            it.in.setHeader("To", "user@local")
+            it.in.setHeader("From", "llm@local")
+            it.in.setHeader("Subject", "Your App")
+        }
+        .to('smtp://email-server:1025')
+    }
+})
+ctx.start()
+Thread.sleep(Long.MAX_VALUE)
+"""
+
+# client-agent DeployRouter.groovy
+deploy_router_code = """
+@Grab('org.apache.camel:camel-core:3.21.0')
+@Grab('org.apache.camel:camel-mail:3.21.0')
+import org.apache.camel.builder.RouteBuilder
+import org.apache.camel.impl.DefaultCamelContext
+import java.util.Base64
+
+def ctx = new DefaultCamelContext()
+ctx.addRoutes(new RouteBuilder() {
+    void configure() {
+        from('imaps://user@local@email-server:143?username=user@local&password=user&delete=false&consumer.delay=5000')
+        .filter { it.in.headers["Subject"]?.contains("Your App") }
+        .process {
+            def body = it.in.body.toString()
+            def matcher = (body =~ /Content-Transfer-Encoding: base64\\s+([A-Za-z0-9+\\/=\r\n]+)--EMLLM--/)
+            if (!matcher.find()) return
+
+            def base64 = matcher.group(1).replaceAll("\\s+", "")
+            def zipBytes = Base64.decoder.decode(base64)
+            def zipPath = "/tmp/app.zip"
+            new File(zipPath).bytes = zipBytes
+            new File("/opt/emllm/app").mkdirs()
+            def unzip = ["unzip", "-o", zipPath, "-d", "/opt/emllm/app"].execute()
+            unzip.waitFor()
+            def runScript = new File("/opt/emllm/app/run.sh")
+            if (runScript.exists()) {
+                runScript.setExecutable(true)
+                ["/bin/bash", runScript.absolutePath].execute()
+            }
+        }
+    }
+})
+ctx.start()
+Thread.sleep(Long.MAX_VALUE)
+"""
+
+# bot-generator main.groovy
+bot_main_groovy = """
+@Grab('jakarta.mail:jakarta.mail-api:2.1.2')
+@Grab('com.sun.mail:jakarta.mail:2.1.2')
+import jakarta.mail.*
+import jakarta.mail.internet.*
+
+def session = Session.getInstance([
+    'mail.smtp.host':'email-server',
+    'mail.smtp.port':'1025',
+    'mail.smtp.auth':'false'
+])
+
+def prompts = [
+    "text2app: Stwórz aplikację TODO w HTML+JS",
+    "text2app: Wygeneruj prostą grę liczbową w Pythonie",
+    "text2app: Stwórz dashboard monitoringu serwera w Node.js"
+]
+
+while (true) {
+    def msg = new MimeMessage(session)
+    msg.setFrom(new InternetAddress("user@local"))
+    msg.setRecipient(Message.RecipientType.TO, new InternetAddress("llm@local"))
+    msg.setSubject("text2app: request")
+    msg.setText(prompts[new Random().nextInt(prompts.size())])
+    Transport.send(msg)
+    println "📩 Bot wysłał zapytanie do LLM-a"
+    sleep(60000)
+}
+"""
+
+# Save all content into their respective files
+with open("./docker-compose.yml", "w") as f:
+    f.write(docker_compose)
+
+with open("./camel-server/Dockerfile", "w") as f:
+    f.write(camel_dockerfile)
+with open("./camel-server/src/AppRouter.groovy", "w") as f:
+    f.write(app_router_code)
+
+with open("./client-agent/Dockerfile", "w") as f:
+    f.write(client_dockerfile)
+with open("./client-agent/src/DeployRouter.groovy", "w") as f:
+    f.write(deploy_router_code)
+
+with open("./bot-generator/Dockerfile", "w") as f:
+    f.write(bot_dockerfile)
+with open("./bot-generator/src/main.groovy", "w") as f:
+    f.write(bot_main_groovy)
+
+
+
+Świetnie! Poniżej przedstawiam **rozszerzenie projektu** o dwie kluczowe funkcje:
+
+---
+
+## 🔧 1. **Pełne generowanie kodu przez lokalny model LLM (Mistral Code 7B via Ollama)**
+
+### 📌 Co robimy:
+
+Zmieniamy dotychczasowy "stub" generatora kodu na realne wykorzystanie lokalnego modelu językowego Mistral Code 7B za pomocą **OLLAMA**.
+
+### 🔁 Integracja w `camel-server`:
+
+Zamiast sztywno osadzonego kodu Groovy, Apache Camel będzie wysyłać treść wiadomości (prompt) do lokalnego endpointu Ollama (`http://ollama:11434/api/generate`) i odbierać wygenerowany kod.
+
+### 🧩 Przykładowa integracja w Groovy:
+
+```groovy
+def prompt = extractPromptFromEmail(message)
+def response = http.post("http://ollama:11434/api/generate") {
+    contentType 'application/json'
+    body([
+        model: 'mistral:7b-code',
+        prompt: prompt,
+        stream: false
+    ])
+}
+def code = response.body.toString()
+writeCodeToZip(code)
+```
+
+📁 Generowany kod zostanie umieszczony w `app.zip` i dołączony jako załącznik `.eml`.
+
+---
+
+## 🔐 2. **Bezpieczny podpis i walidacja kodu**
+
+Aby kod był **autentyczny** i **bezpieczny do uruchomienia**, wprowadzamy system:
+
+* **Podpisu kodu** (Code Signing) po stronie serwera
+* **Weryfikacji podpisu** po stronie klienta
+
+### 🧾 Format podpisu
+
+* Generujemy klucze RSA (`private.pem` i `public.pem`)
+* Serwer podpisuje skrót SHA-256 całej paczki `.zip`
+* Podpis dołączany jest jako osobny plik `.sig` lub nagłówek w `.eml`
+
+### 📍 Proces
+
+#### 🔐 Serwer (Apache Camel):
+
+```bash
+sha256sum app.zip > hash.txt
+openssl dgst -sha256 -sign private.pem -out signature.sig hash.txt
+```
+
+* Załączamy `signature.sig` i `app.zip` do wiadomości.
+
+#### 🛡️ Klient:
+
+```bash
+openssl dgst -sha256 -verify public.pem -signature signature.sig hash.txt
+```
+
+* Jeśli podpis się zgadza – wykonuje `unzip` i uruchamia `run.sh`.
+
+---
+
+## 📦 Zmiany w architekturze
+
+| Element              | Nowa funkcja                                |
+| -------------------- | ------------------------------------------- |
+| `camel-server`       | łączy się z lokalnym modelem przez Ollama   |
+| `client-agent`       | weryfikuje podpis przed uruchomieniem kodu  |
+| `ollama`             | działa z modelem `mistral:7b-code` lokalnie |
+| `docker-compose.yml` | dodany wolumen `models` i klucze RSA        |
+
+---
+
+## ✅ Co zyskujemy?
+
+### 🧠 Generowanie kodu przez lokalny LLM:
+
+* Nie potrzeba dostępu do chmury
+* Brak kosztów API
+* Szybkość i prywatność
+
+### 🔐 Podpis cyfrowy:
+
+* Gwarantuje, że kod pochodzi z zaufanego źródła
+* Chroni przed podmianą lub atakiem typu "email injection"
+* Może być audytowany i archiwizowany
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+It seems like I can’t do more advanced data analysis right now. Please try again later.
+
+W międzyczasie mogę ręcznie poprowadzić Cię krok po kroku, jak zintegrować pełny przepływ:
+
+---
+
+## 🔁 **Pełna integracja: LLM → podpis → klient → walidacja → uruchomienie**
+
+---
+
+### 📦 1. **Generowanie kluczy RSA**
+
+Na serwerze (np. `camel-server`) wygeneruj klucze:
+
+```bash
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+* `private.pem` zostaje na serwerze
+* `public.pem` kopiujesz do klienta (np. do kontenera `client-agent`)
+
+---
+
+### 🧠 2. **Generowanie kodu przez LLM (Ollama + Mistral)**
+
+W pipeline Camel dodaj HTTP request do lokalnego LLM:
+
+```groovy
+from("imap://...")
+  .process { exchange ->
+    def prompt = extractPrompt(exchange)
+    def response = httpPost(
+      "http://ollama:11434/api/generate",
+      [ model: "mistral:7b-code", prompt: prompt, stream: false ]
+    )
+    def code = response.body.toString()
+    writeToFile("app/generated/main.sh", code)
+  }
+```
+
+---
+
+### 🔐 3. **Podpis kodu**
+
+Po wygenerowaniu pliku:
+
+```bash
+cd app/generated
+sha256sum main.sh > hash.txt
+openssl dgst -sha256 -sign private.pem -out signature.sig hash.txt
+zip app.zip main.sh signature.sig
+```
+
+Załącz `app.zip` w wiadomości `.eml` jako `multipart/mixed`.
+
+---
+
+### 📬 4. **Odbiór po stronie klienta**
+
+Kontener `client-agent` nasłuchuje skrzynki mailowej. Po otrzymaniu `.eml`:
+
+* Rozpakowuje `app.zip`
+* Sprawdza hash i podpis:
+
+```bash
+sha256sum main.sh > hash.txt
+openssl dgst -sha256 -verify public.pem -signature signature.sig hash.txt
+```
+
+---
+
+### 🚀 5. **Auto-deployment (po weryfikacji)**
+
+Jeśli podpis poprawny:
+
+```bash
+chmod +x main.sh
+./main.sh
+```
+
+---
+
+## 🔐 Bezpieczeństwo:
+
+* Możesz podpisać więcej plików (SHA256 `*.zip`)
+* Możesz logować odciski palca wiadomości i podpisów
+* Możesz wdrożyć `GPG` lub `timestamp authority` dla dodatkowej warstwy
+
+
+
+
+Jasne! Oto kompletne elementy, które pozwolą Ci zrealizować pełny przepływ:
+
+---
+
+# 1. Skrypty Apache Camel (Groovy) – serwer
+
+```groovy
+import org.apache.camel.builder.RouteBuilder
+
+class EmailProcessingRoute extends RouteBuilder {
+    @Override
+    void configure() throws Exception {
+
+        from("imap://user@domain?password=pass&folder=INBOX&consumer.delay=60000")
+            .routeId("email-processing-route")
+
+            // Pobranie treści maila i wygenerowanie promptu
+            .process { exchange ->
+                def body = exchange.in.body as String
+                def prompt = extractPromptFromEmail(body)
+                exchange.in.headers["prompt"] = prompt
+            }
+
+            // Wywołanie lokalnego LLM Ollama
+            .to("http4://ollama:11434/api/generate?bridgeEndpoint=true&throwExceptionOnFailure=true")
+
+            // Odebranie wygenerowanego kodu z odpowiedzi
+            .process { exchange ->
+                def llmResponse = exchange.in.body as Map
+                def code = llmResponse["choices"][0]["text"]
+
+                // Zapisz kod do pliku
+                def codeFile = new File("/app/generated/main.sh")
+                codeFile.parentFile.mkdirs()
+                codeFile.text = code
+
+                // Podpisz plik (wywołanie skryptu bash z OpenSSL)
+                def proc = ["bash", "/app/sign-code.sh", "/app/generated/main.sh", "/app/private.pem", "/app/generated"].execute()
+                proc.waitFor()
+            }
+
+            // Utwórz archiwum zip z kodem i podpisem
+            .process { exchange ->
+                def zipFile = new File("/app/generated/app.zip")
+                if (!zipFile.exists()) throw new RuntimeException("Zip file not found!")
+                exchange.in.body = zipFile.bytes
+                exchange.in.headers["CamelFileName"] = "app.eml"
+            }
+
+            // Wyślij maila z załącznikiem
+            .to("smtp://smtp.domain.com?username=user&password=pass")
+    }
+
+    private String extractPromptFromEmail(String emailBody) {
+        // Prosta ekstrakcja promptu z treści maila (np. tekst z pierwszej linii)
+        return emailBody.split("\n")[0]
+    }
+}
+```
+
+---
+
+# 2. `sign-code.sh` — podpisywanie pliku (bash)
+
+```bash
+#!/bin/bash
+# Użycie: ./sign-code.sh <plik_do_podpisania> <ścieżka_do_klucza_prywatnego> <ścieżka_wyjściowa>
+
+FILE_TO_SIGN=$1
+PRIVATE_KEY=$2
+OUTPUT_DIR=$3
+
+# Oblicz hash pliku
+sha256sum $FILE_TO_SIGN > $OUTPUT_DIR/hash.txt
+
+# Podpisz hash kluczem prywatnym
+openssl dgst -sha256 -sign $PRIVATE_KEY -out $OUTPUT_DIR/signature.sig $OUTPUT_DIR/hash.txt
+
+# Utwórz zip z kodem i podpisem
+zip -j $OUTPUT_DIR/app.zip $FILE_TO_SIGN $OUTPUT_DIR/signature.sig $OUTPUT_DIR/hash.txt
+```
+
+---
+
+# 3. Dockerfile dla serwera z OpenSSL i Camelem
+
+```Dockerfile
+FROM openjdk:17-jdk-slim
+
+RUN apt-get update && apt-get install -y openssl zip unzip curl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY camel-server.jar /app/
+COPY sign-code.sh /app/
+COPY private.pem /app/
+COPY public.pem /app/
+
+RUN chmod +x /app/sign-code.sh
+
+CMD ["java", "-jar", "camel-server.jar"]
+```
+
+---
+
+# 4. Autodeployer klienta (Groovy + bash)
+
+```groovy
+import org.apache.camel.builder.RouteBuilder
+
+class ClientEmailRoute extends RouteBuilder {
+    @Override
+    void configure() throws Exception {
+
+        from("imap://client@domain.com?password=pass&folder=INBOX&consumer.delay=15000")
+            .routeId("client-email-route")
+
+            .process { exchange ->
+                // Odczyt załącznika .eml (app.zip)
+                def attachments = exchange.in.getAttachments()
+                def zipBytes = attachments.values().iterator().next().getInputStream().bytes
+                def zipFile = new File("/client/download/app.zip")
+                zipFile.parentFile.mkdirs()
+                zipFile.bytes = zipBytes
+
+                // Rozpakuj zip
+                def procUnzip = ["unzip", "-o", "/client/download/app.zip", "-d", "/client/deploy"].execute()
+                procUnzip.waitFor()
+
+                // Weryfikuj podpis
+                def verifyCmd = [
+                    "openssl", "dgst", "-sha256",
+                    "-verify", "/client/public.pem",
+                    "-signature", "/client/deploy/signature.sig",
+                    "/client/deploy/hash.txt"
+                ]
+                def procVerify = verifyCmd.execute()
+                procVerify.waitFor()
+
+                if (procVerify.exitValue() == 0) {
+                    // Podpis poprawny, uruchom kod
+                    def runScript = new File("/client/deploy/main.sh")
+                    runScript.setExecutable(true)
+                    def procRun = ["bash", "/client/deploy/main.sh"].execute()
+                    procRun.waitFor()
+                } else {
+                    throw new RuntimeException("Weryfikacja podpisu nie powiodła się!")
+                }
+            }
+    }
+}
+```
+
+---
+
+# 5. Dockerfile klienta (z OpenSSL i klientem IMAP)
+
+```Dockerfile
+FROM openjdk:17-jdk-slim
+
+RUN apt-get update && apt-get install -y openssl unzip bash && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /client
+
+COPY client-agent.jar /client/
+COPY public.pem /client/
+
+CMD ["java", "-jar", "client-agent.jar"]
+```
+
+---
+
+# 6. Krótko o `docker-compose.yml`
+
+```yaml
+version: "3.8"
+
+services:
+  camel-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - ./server/private.pem:/app/private.pem
+      - ./server/public.pem:/app/public.pem
+    ports:
+      - "8080:8080"
+    environment:
+      - SMTP_USER=user
+      - SMTP_PASS=pass
+
+  client-agent:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    volumes:
+      - ./client/public.pem:/client/public.pem
+      - ./client/deploy:/client/deploy
+    environment:
+      - IMAP_USER=client@domain.com
+      - IMAP_PASS=pass
+```
+
+---
+
+# Podsumowanie
+
+* **Serwer** odbiera emaile → generuje kod z LLM → podpisuje → wysyła aplikację jako `.eml` z `app.zip`.
+* **Klient** odbiera `.eml` → weryfikuje podpis → auto-deplouje aplikację.
+* Komunikacja zabezpieczona przez **podpis cyfrowy**.
+* Całość łatwa do uruchomienia w Dockerze.
+
+
+Super! Przygotuję teraz strukturę katalogów i pliki z kompletnym kodem do projektu.
+
+---
+
+# Struktura katalogów i plików
+
+```
+email-llm-project/
+├── client/
+│   ├── Dockerfile
+│   ├── client-agent.jar              # (wygenerowany plik JAR z Camel + Groovy)
+│   ├── public.pem
+│   └── deploy/                      # folder do rozpakowywania i uruchamiania aplikacji
+├── server/
+│   ├── Dockerfile
+│   ├── camel-server.jar             # (wygenerowany plik JAR z Camel + Groovy)
+│   ├── sign-code.sh
+│   ├── private.pem
+│   └── public.pem
+└── docker-compose.yml
+```
+
+---
+
+# 1. `server/Dockerfile`
+
+```Dockerfile
+FROM openjdk:17-jdk-slim
+
+RUN apt-get update && apt-get install -y openssl zip unzip curl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY camel-server.jar /app/
+COPY sign-code.sh /app/
+COPY private.pem /app/
+COPY public.pem /app/
+
+RUN chmod +x /app/sign-code.sh
+
+CMD ["java", "-jar", "camel-server.jar"]
+```
+
+---
+
+# 2. `server/sign-code.sh`
+
+```bash
+#!/bin/bash
+# Użycie: ./sign-code.sh <plik_do_podpisania> <ścieżka_do_klucza_prywatnego> <ścieżka_wyjściowa>
+
+FILE_TO_SIGN=$1
+PRIVATE_KEY=$2
+OUTPUT_DIR=$3
+
+# Oblicz hash pliku
+sha256sum $FILE_TO_SIGN > $OUTPUT_DIR/hash.txt
+
+# Podpisz hash kluczem prywatnym
+openssl dgst -sha256 -sign $PRIVATE_KEY -out $OUTPUT_DIR/signature.sig $OUTPUT_DIR/hash.txt
+
+# Utwórz zip z kodem i podpisem
+zip -j $OUTPUT_DIR/app.zip $FILE_TO_SIGN $OUTPUT_DIR/signature.sig $OUTPUT_DIR/hash.txt
+```
+
+---
+
+# 3. `server/camel-server.groovy`
+
+```groovy
+import org.apache.camel.builder.RouteBuilder
+
+class EmailProcessingRoute extends RouteBuilder {
+    @Override
+    void configure() throws Exception {
+
+        from("imap://user@domain.com?password=pass&folder=INBOX&consumer.delay=60000")
+            .routeId("email-processing-route")
+
+            .process { exchange ->
+                def body = exchange.in.body as String
+                def prompt = extractPromptFromEmail(body)
+                exchange.in.headers["prompt"] = prompt
+            }
+
+            .to("http4://ollama:11434/api/generate?bridgeEndpoint=true&throwExceptionOnFailure=true")
+
+            .process { exchange ->
+                def llmResponse = exchange.in.body as Map
+                def code = llmResponse["choices"][0]["text"]
+
+                def codeFile = new File("/app/generated/main.sh")
+                codeFile.parentFile.mkdirs()
+                codeFile.text = code
+
+                def proc = ["bash", "/app/sign-code.sh", "/app/generated/main.sh", "/app/private.pem", "/app/generated"].execute()
+                proc.waitFor()
+            }
+
+            .process { exchange ->
+                def zipFile = new File("/app/generated/app.zip")
+                if (!zipFile.exists()) throw new RuntimeException("Zip file not found!")
+                exchange.in.body = zipFile.bytes
+                exchange.in.headers["CamelFileName"] = "app.eml"
+            }
+
+            .to("smtp://smtp.domain.com?username=user&password=pass")
+    }
+
+    private String extractPromptFromEmail(String emailBody) {
+        return emailBody.split("\n")[0]
+    }
+}
+```
+
+---
+
+# 4. `client/Dockerfile`
+
+```Dockerfile
+FROM openjdk:17-jdk-slim
+
+RUN apt-get update && apt-get install -y openssl unzip bash && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /client
+
+COPY client-agent.jar /client/
+COPY public.pem /client/
+
+CMD ["java", "-jar", "client-agent.jar"]
+```
+
+---
+
+# 5. `client/client-agent.groovy`
+
+```groovy
+import org.apache.camel.builder.RouteBuilder
+
+class ClientEmailRoute extends RouteBuilder {
+    @Override
+    void configure() throws Exception {
+
+        from("imap://client@domain.com?password=pass&folder=INBOX&consumer.delay=15000")
+            .routeId("client-email-route")
+
+            .process { exchange ->
+                def attachments = exchange.in.getAttachments()
+                def zipBytes = attachments.values().iterator().next().getInputStream().bytes
+                def zipFile = new File("/client/download/app.zip")
+                zipFile.parentFile.mkdirs()
+                zipFile.bytes = zipBytes
+
+                def procUnzip = ["unzip", "-o", "/client/download/app.zip", "-d", "/client/deploy"].execute()
+                procUnzip.waitFor()
+
+                def verifyCmd = [
+                    "openssl", "dgst", "-sha256",
+                    "-verify", "/client/public.pem",
+                    "-signature", "/client/deploy/signature.sig",
+                    "/client/deploy/hash.txt"
+                ]
+                def procVerify = verifyCmd.execute()
+                procVerify.waitFor()
+
+                if (procVerify.exitValue() == 0) {
+                    def runScript = new File("/client/deploy/main.sh")
+                    runScript.setExecutable(true)
+                    def procRun = ["bash", "/client/deploy/main.sh"].execute()
+                    procRun.waitFor()
+                } else {
+                    throw new RuntimeException("Weryfikacja podpisu nie powiodła się!")
+                }
+            }
+    }
+}
+```
+
+---
+
+# 6. `docker-compose.yml`
+
+```yaml
+version: "3.8"
+
+services:
+  camel-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - ./server/private.pem:/app/private.pem
+      - ./server/public.pem:/app/public.pem
+      - ./server/generated:/app/generated
+    environment:
+      - SMTP_USER=user
+      - SMTP_PASS=pass
+    ports:
+      - "8080:8080"
+
+  client-agent:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    volumes:
+      - ./client/public.pem:/client/public.pem
+      - ./client/download:/client/download
+      - ./client/deploy:/client/deploy
+    environment:
+      - IMAP_USER=client@domain.com
+      - IMAP_PASS=pass
+```
