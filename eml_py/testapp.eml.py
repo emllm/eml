@@ -673,8 +673,8 @@ Content-Disposition: inline; filename="index.html"
         </main>
         
         <footer class=3D"footer">
-            <p>🌍 Universal EML WebApp - Compatible with all platforms</p>
-            <p>🐍 Powered by Python | 📧 Valid EML format</p>
+            <p>&#x1F30D; Universal EML WebApp - Compatible with all platforms</p>
+            <p>&#x1F40D; Powered by Python | &#x1F4E7; Valid EML format</p>
         </footer>
     </div>
     <script src=3D"script.js"></script>
@@ -1493,7 +1493,7 @@ Content-Transfer-Encoding: quoted-printable
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌍 Universal Dashboard - Faktury Maj 2025</title>
+    <title>\U0001F30D Universal Dashboard - Faktury Maj 2025</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -1560,12 +1560,12 @@ Content-Transfer-Encoding: quoted-printable
                 <div class="invoice-content">
                     <img src="cid:invoice1_thumb" alt="Faktura 001" class="thumbnail">
                     <div class="invoice-details">
-                        <h4>📄 Firma ABC Sp. z o.o.</h4>
+                        <h4>\U0001F4B0 Firma ABC Sp. z o.o.</h4>
                         <p class="description">Usługi IT - maj 2025</p>
                         <div class="amount-large">2,500 PLN</div>
                         <div class="invoice-meta">
-                            <span>📅 2025-05-15</span>
-                            <span>💳 Przelew</span>
+                            <span>\U0001F4B0 Saldo: 24 567,89 PLN</span>
+                            <span>\U0001F50D Wyszukaj fakturę</span>
                         </div>
                     </div>
                 </div>
@@ -1579,12 +1579,12 @@ Content-Transfer-Encoding: quoted-printable
                 <div class="invoice-content">
                     <img src="cid:invoice2_thumb" alt="Faktura 002" class="thumbnail">
                     <div class="invoice-details">
-                        <h4>📄 XYZ Solutions</h4>
+                        <h4>\U0001F4B0 XYZ Solutions</h4>
                         <p class="description">Konsultacje - maj 2025</p>
                         <div class="amount-large">1,200 PLN</div>
                         <div class="invoice-meta">
-                            <span>📅 2025-05-20</span>
-                            <span>⏳ 5 dni</span>
+                            <span>\U0001F4C5 2025-05-20</span>
+                            <span>\U0001F4CA Podsumowanie</span>
                         </div>
                     </div>
                 </div>
