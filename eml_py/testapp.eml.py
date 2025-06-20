@@ -206,41 +206,63 @@ def extract_eml_content(script_path):
         print(f" Błąd podczas wyodrębniania zawartości EML: {e}")
         raise
 
+def update_html_references(html_path):
+    """
+    Update HTML file to use flat file references
+    
+    Args:
+        html_path (str): Path to the HTML file to update
+    """
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Update CSS and JS paths to use flat filenames
+        content = re.sub(r'href=["\'](?:[^/]+/)*([^/"\']+\.css)["\']', r'href="\1"', content, flags=re.IGNORECASE)
+        content = re.sub(r'src=["\'](?:[^/]+/)*([^/"\']+\.js)["\']', r'src="\1"', content, flags=re.IGNORECASE)
+        content = re.sub(r'src=["\'](?:[^/]+/)*([^/"\']+\.(?:png|jpg|jpeg|gif|svg|ico))["\']', r'src="\1"', content, flags=re.IGNORECASE)
+        
+        # Handle inline styles with url()
+        content = re.sub(r'url\(["\']?(?:[^/]+/)*([^/"\')]+\.(?:png|jpg|jpeg|gif|svg|ico))["\']?\)', 
+                        r'url("\1")', content, flags=re.IGNORECASE)
+        
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+            
+    except Exception as e:
+        print(f"⚠ Warning: Could not update HTML references in {html_path}: {e}")
+
 def extract_from_eml(eml_file, output_dir):
     """
-    Extract files from an EML file
+    Extract files from an EML file to a flat directory structure
     
     Args:
         eml_file (str): Path to the EML file to extract from
-        output_dir (str): Directory to extract files to
+        output_dir (str): Directory to extract files to (will be created if it doesn't exist)
         
     Returns:
         list: List of dictionaries containing information about extracted files
     """
     extracted_files = []
+    html_files = []
     
     try:
-        print(f"\n🔍 Analizowanie pliku EML: {eml_file}")
+        print(f"\n🔍 Analyzing EML file: {eml_file}")
         
-        # First try to parse the EML file
+        # First try to parse the EML file as text
         with open(eml_file, 'r', encoding='utf-8') as f:
             msg = email.message_from_file(f)
             
         # If parsing fails, try reading as bytes
         if not msg:
-            print("⚠ Nie udało się sparsować jako tekst, próbuję jako dane binarne...")
+            print("⚠ Could not parse as text, trying as binary...")
             with open(eml_file, 'rb') as f:
                 msg = email.message_from_binary_file(f)
         
         if not msg:
-            raise ValueError("Nie udało się sparsować pliku EML")
+            raise ValueError("Failed to parse EML file")
             
-        print(f"\nPomyślnie sparsowano wiadomość EML (typ: {msg.get_content_type()})")
-        
-        # Print message structure for debugging
-        print("\nStruktura wiadomości:")
-        print(f"- Typ: {type(msg)}")
-        print(f"- Czy multipart: {msg.is_multipart()}")
+        print(f"\nSuccessfully parsed EML message (type: {msg.get_content_type()})")
         
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -249,27 +271,47 @@ def extract_from_eml(eml_file, output_dir):
         for part in msg.walk():
             # Skip multipart container parts
             if part.get_content_maintype() == 'multipart':
-                print(f"\nPomijam kontener multipart: {part.get_content_type()}")
                 continue
                 
             content_type = part.get_content_type()
             content_disposition = part.get("Content-Disposition", "")
+            content_id = part.get("Content-ID", "").strip("<>")
             
-            # Get filename from headers or generate one
-            filename = part.get_filename()
-            if not filename and 'filename=' in content_disposition:
-                # Extract filename from Content-Disposition if available
+            # Determine filename based on content type and headers
+            filename = None
+            
+            # Try to get filename from Content-Disposition
+            if 'filename=' in content_disposition:
                 filename = content_disposition.split('filename=')[1].strip('"\'')
             
-            if not filename:
-                # Generate a filename based on content type or part number
-                ext = mimetypes.guess_extension(content_type) or '.bin'
-                filename = f'part-{len(extracted_files)}{ext}'
+            # If no filename, try to determine from Content-Type and Content-ID
+            if not filename and content_id:
+                if content_type == 'text/html':
+                    filename = 'index.html' if 'index' not in [f['name'] for f in extracted_files] else f'page_{len(html_files)}.html'
+                elif content_type == 'text/css':
+                    filename = 'style.css' if 'style.css' not in [f['name'] for f in extracted_files] else f'style_{len(extracted_files)}.css'
+                elif content_type == 'application/javascript':
+                    filename = 'app.js' if 'app.js' not in [f['name'] for f in extracted_files] else f'script_{len(extracted_files)}.js'
+                elif content_type.startswith('image/'):
+                    ext = mimetypes.guess_extension(content_type) or '.bin'
+                    filename = f'image_{len(extracted_files)}{ext}'
             
-            # Clean up filename
+            # If still no filename, generate one
+            if not filename:
+                ext = mimetypes.guess_extension(content_type) or '.bin'
+                filename = f'file_{len(extracted_files)}{ext}'
+            
+            # Clean up filename (keep only basename to ensure flat structure)
             filename = os.path.basename(filename).strip()
             if not filename:
-                filename = f'part-{len(extracted_files)}.bin'
+                filename = f'file_{len(extracted_files)}.bin'
+            
+            # Ensure filename is unique
+            base_name, ext = os.path.splitext(filename)
+            counter = 1
+            while filename in [f['name'] for f in extracted_files]:
+                filename = f"{base_name}_{counter}{ext}"
+                counter += 1
             
             # Save the file
             filepath = os.path.join(output_dir, filename)
@@ -282,32 +324,34 @@ def extract_from_eml(eml_file, output_dir):
                         payload = payload.encode('utf-8')
                 
                 if payload:
-                    # Ensure the directory exists
-                    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-                    
                     # Write the file
                     with open(filepath, 'wb') as f:
                         f.write(payload)
                     
                     # Get file size and add to extracted files list
                     file_size = os.path.getsize(filepath)
-                    extracted_files.append({
+                    file_info = {
                         'name': filename,
                         'path': filepath,
                         'size': file_size,
                         'content_type': content_type
-                    })
+                    }
                     
+                    # Track HTML files for reference updates
+                    if content_type == 'text/html':
+                        html_files.append(filepath)
+                    
+                    extracted_files.append(file_info)
                     print(f"✅ {filename} ({file_size} bytes, {content_type})")
                 
             except Exception as e:
-                print(f"❌ Błąd podczas zapisywania pliku {filename}: {e}")
+                print(f"❌ Error saving file {filename}: {e}")
                 continue
         
+        # Handle non-multipart messages
         if not extracted_files and not msg.is_multipart():
-            # Handle non-multipart messages that didn't match our extraction logic
             try:
-                filename = msg.get_filename() or 'content.bin'
+                filename = 'content.txt' if msg.get_content_type().startswith('text/') else 'content.bin'
                 filepath = os.path.join(output_dir, filename)
                 
                 payload = msg.get_payload(decode=True) or msg.get_payload()
@@ -326,13 +370,17 @@ def extract_from_eml(eml_file, output_dir):
                 })
                 print(f"✅ {filename} ({file_size} bytes, {msg.get_content_type()})")
             except Exception as e:
-                print(f"❌ Błąd podczas zapisywania głównej zawartości: {e}")
+                print(f"❌ Error saving main content: {e}")
         
-        print(f"\n📁 Wyodrębniono {len(extracted_files)} plików do: {output_dir}")
+        # Update HTML files to use flat references
+        for html_file in html_files:
+            update_html_references(html_file)
+        
+        print(f"\n📁 Extracted {len(extracted_files)} files to: {output_dir}")
         return extracted_files
         
     except Exception as e:
-        print(f"❌ Błąd podczas przetwarzania pliku EML: {e}")
+        print(f"❌ Error processing EML file: {e}")
         raise
 
 
@@ -463,18 +511,35 @@ def action_browse(script_path):
                 print("❌ Brak pliku EML do przetworzenia")
                 return
 
+    def update_html_links(html_file):
+        """
+        Update HTML file to use relative paths for resources (flat structure)
+        
+        Args:
+            html_file (str): Path to the HTML file to update
+        """
+        try:
+            with open(html_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Update CSS and JS paths to use filenames directly (no subdirectories)
+            content = re.sub(r'href=["\'](?:[^/]+/)*([^/"\']+\.css)["\']', r'href="\1"', content, flags=re.IGNORECASE)
+            content = re.sub(r'src=["\'](?:[^/]+/)*([^/"\']+\.js)["\']', r'src="\1"', content, flags=re.IGNORECASE)
+            content = re.sub(r'src=["\'](?:[^/]+/)*([^/"\']+\.(?:png|jpg|jpeg|gif|svg|ico))["\']', r'src="\1"', content, flags=re.IGNORECASE)
+            
+            # Handle inline styles with url() references
+            content = re.sub(r'url\(["\']?(?:[^/]+/)*([^/"\')]+\.(?:png|jpg|jpeg|gif|svg|ico))["\']?\)', 
+                            r'url("\1")', content, flags=re.IGNORECASE)
+            
+            with open(html_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+                
+        except Exception as e:
+            print(f"⚠ Warning: Could not update HTML links in {html_file}: {e}")
+
     # Process the HTML file
     try:
-        with open(index_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-
-        # Replace cid: references with local files
-        html_content = re.sub(r'src=["\']cid:([^"\']+)["\']', r'src="\1"', html_content)
-        html_content = re.sub(r'href=["\']cid:([^"\']+)["\']', r'href="\1"', html_content)
-
-        # Save the processed HTML
-        with open(index_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
+        update_html_links(index_path)
 
         # Open in browser
         file_url = f"file://{index_path.replace(os.sep, '/')}"

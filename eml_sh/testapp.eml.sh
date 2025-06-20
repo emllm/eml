@@ -27,43 +27,38 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
             # Wyodrębnij CSS
             if grep -q 'Content-Type: text/css' "$0"; then
                 echo "Znaleziono plik CSS, wyodrębniam..."
-                mkdir -p extracted_content/css
                 sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' | base64 -d > extracted_content/css/style.css 2>/dev/null || \
+                    sed '1d;$d' | base64 -d > extracted_content/style.css 2>/dev/null || \
                     sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' > extracted_content/css/style.css
+                    sed '1d;$d' > extracted_content/style.css
             fi
             
             # Extract JavaScript
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
-                mkdir -p extracted_content/js
-                # Extract JavaScript content between boundaries
-                sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    grep -v '^Content-' | \
-                    sed '/^--/d' > extracted_content/js/app.js
+                awk '/Content-Type: application\/javascript/{flag=1; next} /--WEBAPP_BOUNDARY_/{flag=0} flag' "$0" | \
+                    grep -v '^Content-' > extracted_content/app.js
             fi
             
             # Wyodrębnij favicon
             if grep -q 'Content-Type: image/svg+xml.*favicon' "$0"; then
                 echo "Znaleziono favicon, wyodrębniam..."
-                mkdir -p extracted_content/images
                 sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
                     grep -v '^Content-' | \
-                    base64 -d > extracted_content/images/favicon.svg 2>/dev/null || \
+                    base64 -d > extracted_content/favicon.svg 2>/dev/null || \
                     sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    grep -v '^Content-' > extracted_content/images/favicon.svg
+                    grep -v '^Content-' > extracted_content/favicon.svg
             fi
             
             # Create a temporary directory for CID version
-            mkdir -p extracted_content/cid_version
+            mkdir -p extracted_content
             
             # Create the HTML with CID references
             echo "Tworzenie wersji HTML z referencjami CID..."
             cat extracted_content/index.html | \
                 sed 's|href="css/style.css"|href="cid:style_css"|g' | \
                 sed 's|src="js/app.js"|src="cid:script_js"|g' | \
-                sed 's|href="images/favicon.svg"|href="cid:favicon_svg"|g' > extracted_content/cid_version/index.html
+                sed 's|href="images/favicon.svg"|href="cid:favicon_svg"|g' > extracted_content/cid_index.html
             
             # Create a temporary file for the EML content
             TMP_EML=$(mktemp)
@@ -90,10 +85,11 @@ Content-ID: <main_html>
 EOM
 
             # Add HTML content
-            cat extracted_content/cid_version/index.html >> "$TMP_EML"
+            cat extracted_content/cid_index.html >> "$TMP_EML"
             
-            # Add CSS part
-            cat >> "$TMP_EML" <<- EOM
+            # Add CSS part if exists
+            if [ -f "extracted_content/style.css" ]; then
+                cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
 Content-Type: text/css; charset=utf-8
@@ -102,11 +98,13 @@ Content-ID: <style_css>
 Content-Disposition: inline; filename="style.css"
 
 EOM
-            # Add CSS content
-            cat extracted_content/css/style.css >> "$TMP_EML"
+                # Add CSS content
+                cat extracted_content/style.css >> "$TMP_EML"
+            fi
             
-            # Add JavaScript part
-            cat >> "$TMP_EML" <<- EOM
+            # Add JavaScript part if exists
+            if [ -f "extracted_content/app.js" ]; then
+                cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
 Content-Type: application/javascript; charset=utf-8
@@ -115,13 +113,12 @@ Content-ID: <script_js>
 Content-Disposition: inline; filename="app.js"
 
 EOM
-            # Add JavaScript content from the extracted file
-            if [ -f "extracted_content/js/app.js" ]; then
-                cat extracted_content/js/app.js >> "$TMP_EML"
+                # Add JavaScript content
+                cat extracted_content/app.js >> "$TMP_EML"
             fi
             
             # Add favicon if exists
-            if [ -f "extracted_content/images/favicon.svg" ]; then
+            if [ -f "extracted_content/favicon.svg" ]; then
                 cat >> "$TMP_EML" <<- EOM
 
 --RELATED_BOUNDARY_12345
@@ -131,7 +128,7 @@ Content-ID: <favicon_svg>
 Content-Disposition: inline; filename="favicon.svg"
 
 EOM
-                base64 < extracted_content/images/favicon.svg >> "$TMP_EML"
+                base64 < extracted_content/favicon.svg >> "$TMP_EML"
             fi
             
             # Close boundaries
