@@ -1,3 +1,5 @@
+Content-Type: multipart/alternative; boundary="WEBAPP_BOUNDARY_12345"
+
 #!/bin/bash
 #
 # Self-extracting EML script - testapp.eml.sh
@@ -15,10 +17,10 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
         extract)
             echo "Wyodrębnianie zawartości..."
             mkdir -p extracted_content
-            
+
             # Wyodrębnij HTML
             sed -n '/^<\!DOCTYPE html>/,/^<\/html>$/p' "$0" > extracted_content/index.html
-            
+
             # Wyodrębnij CSS
             if grep -q 'Content-Type: text/css' "$0"; then
                 echo "Znaleziono plik CSS, wyodrębniam..."
@@ -28,7 +30,7 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
                     sed '1d;$d' > extracted_content/css/style.css
             fi
-            
+
             # Wyodrębnij JS
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
@@ -38,14 +40,14 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
                     sed '1d;$d' > extracted_content/js/app.js
             fi
-            
+
             # Skopiuj oryginalny plik EML
             cp "$0" extracted_content/original.eml
-            
+
             # Zaktualizuj ścieżki w pliku HTML
             sed -i 's|href="cid:style_css"|href="css/style.css"|g' extracted_content/index.html
             sed -i 's|src="cid:app_js"|src="js/app.js"|g' extracted_content/index.html
-            
+
             echo "Zawartość wyodrębniona do katalogu extracted_content/"
             ls -la extracted_content/
             ;;

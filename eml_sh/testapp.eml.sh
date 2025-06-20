@@ -1,3 +1,5 @@
+Content-Type: multipart/alternative; boundary="WEBAPP_BOUNDARY_12345"
+
 #!/bin/bash
 #
 # Self-extracting EML script - testapp.eml.sh
@@ -33,10 +35,9 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
                 mkdir -p extracted_content/js
-                sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' | base64 -d > extracted_content/js/app.js 2>/dev/null || \
-                    sed -n '/Content-Type: application\/javascript/,/--WEBAPP_BOUNDARY_/p' "$0" | \
-                    sed '1d;$d' > extracted_content/js/app.js
+                # Pobierz zawartość między znacznikami Content-Type a następnym --WEBAPP_BOUNDARY_
+                awk '/Content-Type: application\/javascript/{flag=1; next} /--WEBAPP_BOUNDARY_/{flag=0} flag' "$0" | \
+                    grep -v '^Content-' > extracted_content/js/app.js
             fi
             
             # Wyodrębnij favicon
