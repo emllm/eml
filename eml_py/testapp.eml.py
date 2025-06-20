@@ -1447,8 +1447,19 @@ Content-Transfer-Encoding: base64
 LyogQmFzZSBzdHlsZXMgKi8KOmhvc3QgewogICAgLS1wcmltYXJ5OiAjNDI4NWY0OwogICAgLS1zZWNvbmRhcnk6ICMzNzc5YjU7CiAgICAtLXN1Y2Nlc3M6ICMyZTdlNGI7CiAgICAtLWluZm86ICMxN2EyYjg7CiAgICAtLXdhcm5pbmc6ICNmZjYwMDA7CiAgICAtLWRhbmdlcjogI2RjMzU0NTsKICAgIC0tbGlnaHQ6ICNmOGY5ZmE7CiAgICAtLWRhcms6ICMzNDNhNDA7CiAgICAtLWdyYXktMTAwOiAjZjhmOWZhOwogICAgLS1ncmF5LTIwMDogI2U5ZWNmMTsKICAgIC0tZ3JheS0zMDA6ICNkZWRlZTc7CiAgICAtLWdyYXktNDAwOiAjY2JkNWQzOwogICAgLS1ncmF5LTUwMDogIzllYTVhYjsKICAgIC0tZ3JheS02MDA6ICM2Yzc0ODA7CiAgICAtLWdyYXktNzAwOiAjNDk1MDU3OwogICAgLS1ncmF5LTgwMCAjM2QzYzRlOwogICAgLS1ncmF5LTkwMCAjMzQzYzQ3OwogICAgLS1mb250LXNhbnM6IC1hcHBsZS1zeXN0ZW0sIEJsaW5rTWFjU3lzdGVtRm9udCwgIlNlZ29lIFVJIiwgUm9ib3RvLCAiSGVsdmV0aWNhIE5ldWUiLCBBcmlhbCwgc2Fucy1zZXJpZiwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIiwgIlNlZ29lIFVJIFN5bWJvbCI7Cn0KCmJvZHkgewogICAgZm9udC1mYW1pbHk6IHZhcigtLWZvbnQtc2Fucyk7CiAgICBsaW5lLWhlaWdodDogMS41OwogICAgY29sb3I6IHZhcigtLWRhcms7CiAgICBtYXJnaW46IDA7CiAgICBwYWRkaW5nOiAwOwogICAgYmFja2dyb3VuZC1jb2xvcjogI2Y4ZjlmYTsKfQoKLyogQ29udGFpbmVyICovCi5jb250YWluZXIgewogICAgbWF4LXdpZHRoOiAxMjAwcHg7CiAgICBtYXJnaW46IDAgYXV0bzsKICAgIHBhZGRpbmc6IDIwcHg7Cn0KCi8qIFBsYXRmb3JtIGluZGljYXRvciAqLwo="""
 
 # Uruchom tylko jeśli wywołano jako skrypt
-if __name__ == '__main__':
-    main()
+def get_eml_content():
+    """Return the EML content as a string."""
+    return """MIME-Version: 1.0
+Subject: =?utf-8?b?8J+MiSBVbml2ZXJzYWwgRGFzaGJvYXJkIC0gRmFrdHVyeSBNYWogMjAyNQ==?=
+Content-Type: multipart/mixed; boundary=UNIVERSAL_WEBAPP_BOUNDARY
+X-App-Type: universal-webapp
+X-App-Name: Faktury Maj 2025
+X-Generator: Universal-EML-Script-Generator
+X-Compatible-Platforms: Windows,macOS,Linux
+Python-Version: 3.6
+
+--UNIVERSAL_WEBAPP_BOUNDARY
+Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
 <!DOCTYPE html>
@@ -1456,7 +1467,7 @@ Content-Transfer-Encoding: quoted-printable
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>\U0001F30D Universal Dashboard - Faktury Maj 2025</title>
+    <title>🌍 Universal Dashboard - Faktury Maj 2025</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -1474,74 +1485,10 @@ Content-Transfer-Encoding: quoted-printable
             <button onclick="filterByStatus('pending')" class="btn-warning">Oczekujące</button>
             <button onclick="showStats()" class="btn-info">Statystyki</button>
         </nav>
-    </header>
+    </header>"""
 
-    <main>
-        <div class="stats-grid">
-            <div class="stat-card total">
-                <div class="stat-icon">💰</div>
-                <div class="stat-content">
-                    <h3>Łączna wartość</h3>
-                    <span class="amount" id="totalAmount">15,750 PLN</span>
-                </div>
-            </div>
-
-            <div class="stat-card paid">
-                <div class="stat-icon">✅</div>
-                <div class="stat-content">
-                    <h3>Faktury opłacone</h3>
-                    <span class="count" id="paidCount">8/12</span>
-                </div>
-            </div>
-
-            <div class="stat-card pending">
-                <div class="stat-icon">⏳</div>
-                <div class="stat-content">
-                    <h3>Oczekujące</h3>
-                    <span class="count" id="pendingCount">4</span>
-                </div>
-            </div>
-
-            <div class="stat-card progress">
-                <div class="stat-icon">📊</div>
-                <div class="stat-content">
-                    <h3>Postęp</h3>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 67%"></div>
-                    </div>
-                    <span class="percentage">67%</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="invoice-grid" id="invoiceGrid">
-            <div class="invoice-card" data-status="paid" data-amount="2500">
-                <div class="invoice-header">
-                    <span class="invoice-number">#2025/05/001</span>
-                    <span class="status paid">Opłacona</span>
-                </div>
-                <div class="invoice-content">
-                    <img src="cid:invoice1_thumb" alt="Faktura 001" class="thumbnail">
-                    <div class="invoice-details">
-                        <h4>\U0001F4B0 Firma ABC Sp. z o.o.</h4>
-                        <p class="description">Usługi IT - maj 2025</p>
-                        <div class="amount-large">2,500 PLN</div>
-                        <div class="invoice-meta">
-                            <span>\U0001F4B0 Saldo: 24 567,89 PLN</span>
-                            <span>\U0001F50D Wyszukaj fakturę</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="invoice-card" data-status="pending" data-amount="1200">
-                <div class="invoice-header">
-                    <span class="invoice-number">#2025/05/002</span>
-                    <span class="status pending">Oczekuje</span>
-                </div>
-                <div class="invoice-content">
-                    <img src="cid:invoice2_thumb" alt="Faktura 002" class="thumbnail">
-                    <div class="invoice-details">
+if __name__ == '__main__':
+    main()
                         <h4>\U0001F4B0 XYZ Solutions</h4>
                         <p class="description">Konsultacje - maj 2025</p>
                         <div class="amount-large">1,200 PLN</div>
