@@ -36,8 +36,37 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
             # Extract JavaScript
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
-                awk '/Content-Type: application\/javascript/{flag=1; next} /--WEBAPP_BOUNDARY_/{flag=0} flag' "$0" | \
-                    grep -v '^Content-' > extracted_content/app.js
+                # Create a temporary file to hold the JavaScript content
+                TEMP_JS=$(mktemp)
+                
+                # Find the line where JavaScript content starts
+                START_LINE=$(grep -n 'Content-Type: application/javascript' "$0" | head -1 | cut -d: -f1)
+                
+                # Extract the JavaScript content using awk
+                awk -v start="$START_LINE" '
+                NR < start { next }
+                /^--WEBAPP_BOUNDARY_/ { exit }
+                /^[[:space:]]*function/ { in_js=1 }
+                in_js { print }
+                ' "$0" > "$TEMP_JS"
+                
+                # Clean up the JavaScript file
+                grep -v '^[[:space:]]*EOM' "$TEMP_JS" | \
+                    grep -v '^[[:space:]]*cat ' | \
+                    grep -v '^[[:space:]]*fi' | \
+                    grep -v '^[[:space:]]*#' | \
+                    grep -v '^[[:space:]]*echo' | \
+                    grep -v '^[[:space:]]*sed' | \
+                    grep -v '^[[:space:]]*grep' | \
+                    grep -v '^[[:space:]]*JS_' | \
+                    grep -v '^[[:space:]]*\$' | \
+                    grep -v '^[[:space:]]*>>' | \
+                    grep -v '^[[:space:]]*<' | \
+                    grep -v '^[[:space:]]*\"' | \
+                    sed '/^[[:space:]]*$/d' > extracted_content/app.js
+                
+                # Remove the temporary file
+                rm -f "$TEMP_JS"
             fi
             
             # Wyodrębnij favicon

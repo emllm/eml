@@ -15,6 +15,9 @@ EMLLM is a powerful Python library for parsing, validating, and generating email
 - Parse and validate email messages
 - Generate email messages programmatically
 - Support for MIME messages and attachments
+- Extract embedded web content from EML files
+- Flat directory structure for extracted files
+- Automatic HTML reference updates for extracted content
 - Integration with Large Language Models
 - Command-line interface for easy usage
 - REST API for remote processing
@@ -28,6 +31,49 @@ EMLLM is a powerful Python library for parsing, validating, and generating email
 ```bash
 pip install emllm
 ```
+
+### EML Extraction
+
+EMLLM provides powerful tools for extracting web content from EML files:
+
+#### Python Implementation (`eml_py/`)
+
+```bash
+# Extract files from an EML file
+python3 eml_py/testapp.eml.py extract
+
+# Run the extracted web application
+python3 eml_py/testapp.eml.py run
+
+# Open in browser
+python3 eml_py/testapp.eml.py browse
+```
+
+#### Shell Implementation (`eml_sh/`)
+
+```bash
+# Make the script executable
+chmod +x eml_sh/testapp.eml.sh
+
+# Extract files from an EML file
+./eml_sh/testapp.eml.sh extract
+
+# Run the extracted web application
+./eml_sh/testapp.eml.sh run
+
+# Open in browser
+./eml_sh/testapp.eml.sh browse
+```
+
+Both implementations support:
+- Extracting HTML, CSS, JavaScript, and other assets
+- Flat directory structure for easy deployment
+- Automatic path resolution in HTML files
+- Cross-platform compatibility
+
+### Basic Usage
+
+For general email parsing and generation:
 
 ### Basic Usage
 

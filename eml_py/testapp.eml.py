@@ -107,64 +107,49 @@ def extract_eml_content(script_path):
     try:
         print("\u2709 Wyszukiwanie zawartości EML w pliku...")
         
-        # Read the input file as binary to avoid encoding issues
+        # Read the input file as binary to preserve all content
         with open(script_path, 'rb') as f:
             content = f.read()
         
-        # Convert to string for searching
-        try:
-            content_str = content.decode('utf-8')
-        except UnicodeDecodeError:
-            content_str = content.decode('latin-1')
-        
         # Look for the EML content marker
-        eml_marker = '# ===================================================================='
-        eml_start = content_str.find(eml_marker)
+        eml_marker = b'# ===================================================================='
+        eml_start = content.find(eml_marker)
         
         if eml_start == -1:
             raise ValueError("Nie znaleziono znacznika początku zawartości EML w pliku")
         
         # Find the start of the EML content (after the marker and any whitespace)
-        eml_content_start = content_str.find('MIME-Version: 1.0', eml_start)
+        eml_content_start = content.find(b'MIME-Version: 1.0', eml_start)
         if eml_content_start == -1:
             # Try with triple quotes
-            eml_content_start = content_str.find('"""\nMIME-Version: 1.0', eml_start)
+            eml_content_start = content.find(b'"""\nMIME-Version: 1.0', eml_start)
             if eml_content_start != -1:
                 eml_content_start += 5  # Skip the triple quote, newline, and newline before headers
         
         if eml_content_start == -1:
             raise ValueError("Nie udało się zlokalizować zawartości EML w pliku")
         
-        # Extract the EML content
-        eml_content = content_str[eml_content_start:]
+        # Extract the EML content as bytes
+        eml_content = content[eml_content_start:]
         
         # Look for the end of the EML content (before the closing triple quotes or boundary)
-        eml_end = eml_content.rfind('--UNIVERSAL_WEBAPP_BOUNDARY--')
+        eml_end = eml_content.rfind(b'--UNIVERSAL_WEBAPP_BOUNDARY--')
         if eml_end == -1:
-            eml_end = eml_content.rfind('"""')
+            eml_end = eml_content.rfind(b'"""')
         
         if eml_end != -1:
             eml_content = eml_content[:eml_end].strip()
-            
-        # If we have triple quotes at the start, remove them
-        eml_content = eml_content.lstrip('"')
         
-        # Ensure we have proper line endings
-        eml_content = eml_content.replace('\r\n', '\n').replace('\r', '\n')
+        # Ensure proper MIME headers if needed
+        if not eml_content.startswith(b'MIME-Version: 1.0'):
+            eml_content = b'MIME-Version: 1.0\n' + eml_content
         
-        # Ensure proper MIME headers
-        if not eml_content.startswith('MIME-Version: 1.0'):
-            eml_content = 'MIME-Version: 1.0\n' + eml_content
-        
-        # Save the EML content to a temporary file
-        eml_file = os.path.join(temp_dir, 'extracted.eml')
-        with open(eml_file, 'w', encoding='utf-8') as f:
+        # Save the EML content to a temporary file as binary
+        eml_file = os.path.join(temp_dir, 'original.eml')
+        with open(eml_file, 'wb') as f:
             f.write(eml_content)
         
         print(f"✅ Zapisano EML do: {eml_file}")
-        
-        # Also save a copy as content.eml for backward compatibility
-        shutil.copy2(eml_file, os.path.join(temp_dir, 'content.eml'))
         
         # Now extract the files from the EML
         extracted_files = extract_from_eml(eml_file, temp_dir)
@@ -172,38 +157,34 @@ def extract_eml_content(script_path):
         # Verify extraction
         if not extracted_files:
             print("⚠ Nie wyodrębniono żadnych plików z EML!")
-            # Try to read the EML file directly
-            with open(eml_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-                print(f"\nZawartość EML (pierwsze 500 znaków):\n{content[:500]}...")
+            
+            # Try to parse the EML file directly
+            try:
+                with open(eml_file, 'rb') as f:
+                    msg = email.message_from_binary_file(f)
                 
-                # If no files were extracted but we have HTML content, create an index.html
-                html_start = content.find('<!DOCTYPE html>')
-                if html_start == -1:
-                    html_start = content.find('<html')
-                    
-                if html_start != -1:
-                    index_path = os.path.join(temp_dir, 'index.html')
-                    with open(index_path, 'w', encoding='utf-8') as f_html:
-                        f_html.write(content[html_start:])
-                        
-                    extracted_files = [{
-                        'name': 'index.html',
-                        'path': index_path,
-                        'size': os.path.getsize(index_path),
-                        'content_type': 'text/html'
-                    }]
-                    print("✅ Wyodrębniono zawartość HTML do index.html")
+                if msg.is_multipart():
+                    print(f"Znaleziono wieloczęściową wiadomość ({msg.get_content_type()})")
+                    for part in msg.walk():
+                        content_type = part.get_content_type()
+                        print(f"- {content_type}")
+            except Exception as e:
+                print(f"Błąd podczas analizy EML: {e}")
         else:
             print(f"\n✅ Pomyślnie wyodrębniono {len(extracted_files)} plików:")
             for i, file_info in enumerate(extracted_files, 1):
                 print(f"{i}. {file_info['name']} ({file_info['size']} bytes, {file_info['content_type']})")
         
+        # Create a copy of the EML file in the extracted directory
+        shutil.copy2(eml_file, os.path.join(temp_dir, 'extracted.eml'))
+        
         # Return the directory and the list of extracted files
         return temp_dir, extracted_files
         
     except Exception as e:
-        print(f" Błąd podczas wyodrębniania zawartości EML: {e}")
+        print(f"Błąd podczas wyodrębniania zawartości EML: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 def update_html_references(html_path):
@@ -277,46 +258,40 @@ def extract_from_eml(eml_file, output_dir):
             content_disposition = part.get("Content-Disposition", "")
             content_id = part.get("Content-ID", "").strip("<>")
             
-            # Determine filename based on content type and headers
-            filename = None
-            
-            # Try to get filename from Content-Disposition
-            if 'filename=' in content_disposition:
-                filename = content_disposition.split('filename=')[1].strip('"\'')
-            
-            # If no filename, try to determine from Content-Type and Content-ID
-            if not filename and content_id:
-                if content_type == 'text/html':
-                    filename = 'index.html' if 'index' not in [f['name'] for f in extracted_files] else f'page_{len(html_files)}.html'
-                elif content_type == 'text/css':
-                    filename = 'style.css' if 'style.css' not in [f['name'] for f in extracted_files] else f'style_{len(extracted_files)}.css'
-                elif content_type == 'application/javascript':
-                    filename = 'app.js' if 'app.js' not in [f['name'] for f in extracted_files] else f'script_{len(extracted_files)}.js'
-                elif content_type.startswith('image/'):
-                    ext = mimetypes.guess_extension(content_type) or '.bin'
-                    filename = f'image_{len(extracted_files)}{ext}'
-            
-            # If still no filename, generate one
-            if not filename:
-                ext = mimetypes.guess_extension(content_type) or '.bin'
-                filename = f'file_{len(extracted_files)}{ext}'
-            
-            # Clean up filename (keep only basename to ensure flat structure)
-            filename = os.path.basename(filename).strip()
-            if not filename:
-                filename = f'file_{len(extracted_files)}.bin'
-            
-            # Ensure filename is unique
-            base_name, ext = os.path.splitext(filename)
-            counter = 1
-            while filename in [f['name'] for f in extracted_files]:
-                filename = f"{base_name}_{counter}{ext}"
-                counter += 1
-            
-            # Save the file
-            filepath = os.path.join(output_dir, filename)
             try:
-                # Get the payload, handling both binary and text content
+                content_type = part.get_content_type()
+                content_disposition = part.get("Content-Disposition", "")
+                content_id = part.get("Content-ID", "").strip("<>")
+                
+                # Skip multipart container parts (we'll process their children)
+                if part.is_multipart() and content_type != 'multipart/related':
+                    continue
+                
+                # Get filename from Content-Disposition or Content-Type
+                filename = part.get_filename()
+                if not filename and content_id:
+                    filename = f"{content_id}"
+                    # Add appropriate extension based on content type
+                    ext = mimetypes.guess_extension(part.get_content_type())
+                    if ext:
+                        filename += ext
+                
+                # If still no filename, generate one
+                if not filename:
+                    ext = (mimetypes.guess_extension(part.get_content_type()) 
+                           or '.bin')
+                    filename = f'file_{len(extracted_files)}{ext}'
+                
+                # Clean filename and ensure it's safe
+                filename = os.path.basename(filename)
+                filename = re.sub(r'[^\w\-_. ]', '_', filename)
+                
+                # Map CID to filename for later reference
+                if content_id and content_id not in cid_map:
+                    cid_map[content_id] = filename
+                
+                # Save the file
+                file_path = os.path.join(output_dir, filename)
                 payload = part.get_payload(decode=True)
                 if payload is None:
                     payload = part.get_payload()
@@ -324,64 +299,37 @@ def extract_from_eml(eml_file, output_dir):
                         payload = payload.encode('utf-8')
                 
                 if payload:
-                    # Write the file
-                    with open(filepath, 'wb') as f:
+                    with open(file_path, 'wb') as f:
                         f.write(payload)
                     
-                    # Get file size and add to extracted files list
-                    file_size = os.path.getsize(filepath)
+                    # Add to extracted files list
                     file_info = {
                         'name': filename,
-                        'path': filepath,
-                        'size': file_size,
-                        'content_type': content_type
+                        'path': file_path,
+                        'size': os.path.getsize(file_path),
+                        'content_type': part.get_content_type(),
+                        'content_id': content_id
                     }
-                    
-                    # Track HTML files for reference updates
-                    if content_type == 'text/html':
-                        html_files.append(filepath)
-                    
                     extracted_files.append(file_info)
-                    print(f"✅ {filename} ({file_size} bytes, {content_type})")
+                    print(f"Extracted: {filename} ({content_type})")
                 
             except Exception as e:
-                print(f"❌ Error saving file {filename}: {e}")
-                continue
+                print(f"Error processing part: {e}")
+                import traceback
+                traceback.print_exc()
         
-        # Handle non-multipart messages
-        if not extracted_files and not msg.is_multipart():
-            try:
-                filename = 'content.txt' if msg.get_content_type().startswith('text/') else 'content.bin'
-                filepath = os.path.join(output_dir, filename)
-                
-                payload = msg.get_payload(decode=True) or msg.get_payload()
-                if isinstance(payload, str):
-                    payload = payload.encode('utf-8')
-                
-                with open(filepath, 'wb') as f:
-                    f.write(payload)
-                
-                file_size = os.path.getsize(filepath)
-                extracted_files.append({
-                    'name': filename,
-                    'path': filepath,
-                    'size': file_size,
-                    'content_type': msg.get_content_type()
-                })
-                print(f"✅ {filename} ({file_size} bytes, {msg.get_content_type()})")
-            except Exception as e:
-                print(f"❌ Error saving main content: {e}")
+        # Update HTML files to fix resource references
+        for file_info in extracted_files:
+            if file_info['content_type'] == 'text/html':
+                update_html_references(file_info['path'], cid_map)
         
-        # Update HTML files to use flat references
-        for html_file in html_files:
-            update_html_references(html_file)
-        
-        print(f"\n📁 Extracted {len(extracted_files)} files to: {output_dir}")
         return extracted_files
         
     except Exception as e:
-        print(f"❌ Error processing EML file: {e}")
-        raise
+        print(f"Error processing EML: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 
 def action_extract(script_path):

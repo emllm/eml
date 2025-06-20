@@ -1,53 +1,28 @@
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
-
-EOM
-                # Add JavaScript content
-                cat extracted_content/app.js >> "$TMP_EML"
-            fi
-            
-            # Add favicon if exists
-            if [ -f "extracted_content/favicon.svg" ]; then
-                cat >> "$TMP_EML" <<- EOM
-
---RELATED_BOUNDARY_12345
-
-EOM
-                base64 < extracted_content/favicon.svg >> "$TMP_EML"
-            fi
-            
-            # Close boundaries
-            echo -e "\n--RELATED_BOUNDARY_12345--" >> "$TMP_EML"
-
-function showAll() {
-    const cards = document.querySelectorAll('.invoice-card');
-    cards.forEach(card => card.style.display = 'flex');
-}
-
-function filterByStatus(status) {
-    const cards = document.querySelectorAll('.invoice-card');
-    cards.forEach(card => {
-        if (card.dataset.status === status) {
-            card.style.display = 'flex';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-
-// Animacja ładowania
-document.addEventListener('DOMContentLoaded', function() {
-    const cards = document.querySelectorAll('.invoice-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-
-        setTimeout(() => {
-            card.style.transition = 'all 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-
-    console.log('Dashboard faktur załadowany - Maj 2025');
-});
-
+                JS_END=$(tail -n +"$JS_START" "$0" | grep -n -m 1 '^--WEBAPP_BOUNDARY_' | cut -d: -f1)
+                JS_END=$((JS_START + JS_END - 1))
+                head -n "$JS_END" "$0" | tail -n +"$JS_START" | \
+                    grep -v '^Content-' | \
+                    grep -v '^--' | \
+                    grep -v '^[[:space:]]*EOM' | \
+                    grep -v '^[[:space:]]*cat ' | \
+                    grep -v '^[[:space:]]*fi' | \
+                    grep -v '^[[:space:]]*#' > extracted_content/app.js
+                sed -i '/^[[:space:]]*$/d' extracted_content/app.js
+                echo "Znaleziono favicon, wyodrębniam..."
+                    grep -v '^Content-' | \
+                    base64 -d > extracted_content/favicon.svg 2>/dev/null || \
+                    grep -v '^Content-' > extracted_content/favicon.svg
+            mkdir -p extracted_content
+            echo "Tworzenie wersji HTML z referencjami CID..."
+                sed 's|href="css/style.css"|href="cid:style_css"|g' | \
+                sed 's|src="js/app.js"|src="cid:script_js"|g' | \
+                sed 's|href="images/favicon.svg"|href="cid:favicon_svg"|g' > extracted_content/cid_index.html
+            TMP_EML=$(mktemp)
+MIME-Version: 1.0
+From: system@example.com
+To: recipient@example.com
+Subject: WebApp - Faktury Maj 2025
+X-App-Type: docker-webapp
+X-App-Name: Faktury Maj 2025
+X-Generator: EML-Script-Generator

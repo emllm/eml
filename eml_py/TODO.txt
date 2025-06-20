@@ -4,3 +4,11 @@ poprawna struktura folderu z z pliku testapp.eml.py
 all files are in the extracted_content/ directory without any subdirectories. The
 original.eml
  file is properly formatted with all resources embedded using MIME multipart.
+
+ extracted_content/
+├── app.js
+├── cid_index.html
+├── favicon.svg
+├── index.html
+├── original.eml
+└── style.css
