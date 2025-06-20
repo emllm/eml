@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Gotowy EMLRender container
+  emlrender:
+    image: rootshell/emlrender:latest
+    container_name: emlrender
+    ports:
+      - "8443:443"
+    volumes:
+      - emlrender_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:443/help"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Własny EML Render Server
+  custom-eml-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: custom-eml-server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx jako reverse proxy (opcjonalnie)
+  nginx:
+    image: nginx:alpine
+    container_name: eml-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl/certs:ro
+    depends_on:
+      - custom-eml-server
+      - emlrender
+    restart: unless-stopped
+
+volumes:
+  emlrender_data:
+    driver: local
+
+networks:
+  default:
+    name: eml-network

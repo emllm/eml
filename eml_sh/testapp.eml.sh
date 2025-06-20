@@ -38,14 +38,12 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
             if grep -q 'Content-Type: application/javascript' "$0"; then
                 echo "Znaleziono plik JavaScript, wyodrębniam..."
                 mkdir -p extracted_content/js
-                # Pobierz zawartość między znacznikami Content-Type a następnym --WEBAPP_BOUNDARY_
-                # i wyciągnij tylko kod JavaScript (pomijając nagłówki i linie poleceń)
-                awk '/Content-Type: application\/javascript/{ 
-                    while(getline) { 
-                        if(/^--WEBAPP_BOUNDARY_/) exit; 
-                        if(!/^Content-/ && !/^\s*$/) print; 
-                    } 
-                }' "$0" > extracted_content/js/app.js
+                # Znajdź pozycję początku i końca sekcji JavaScript
+                JS_START=$(grep -n 'Content-Type: application/javascript' "$0" | head -1 | cut -d: -f1)
+                JS_END=$(tail -n +"$JS_START" "$0" | grep -n -m 1 '^--WEBAPP_BOUNDARY_' | cut -d: -f1)
+                JS_END=$((JS_START + JS_END - 1))
+                # Wyodrębnij tylko kod JavaScript, pomiń 3 pierwsze linie (nagłówki)
+                tail -n +"$((JS_START + 3))" "$0" | head -n "$((JS_END - JS_START - 4))" > extracted_content/js/app.js
             fi
             
             # Wyodrębnij favicon
@@ -59,8 +57,65 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     grep -v '^Content-' > extracted_content/images/favicon.svg
             fi
             
-            # Utwórz kopię oryginalnego pliku EML
-            cp "$0" extracted_content/original.eml
+            # Utwórz plik original.eml z prawidłowymi nagłówkami wiadomości
+            cat > extracted_content/original.eml << 'EOL'
+MIME-Version: 1.0
+From: system@example.com
+To: recipient@example.com
+Subject: WebApp - Faktury Maj 2025
+X-App-Type: docker-webapp
+X-App-Name: Faktury Maj 2025
+X-Generator: EML-Script-Generator
+Content-Type: multipart/mixed; boundary="WEBAPP_BOUNDARY_12345"
+
+--WEBAPP_BOUNDARY_12345
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: inline
+
+EOL
+
+            # Dodaj zawartość HTML z oryginalnymi referencjami CID
+            cat extracted_content/original_index.html | sed 's|href="css/style.css"|href="cid:style_css"|g' | \
+                sed 's|src="js/app.js"|src="cid:script_js"|g' >> extracted_content/original.eml
+            
+            # Dodaj pozostałe części MIME
+            echo "" >> extracted_content/original.eml
+            
+            # Dodaj CSS
+            echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
+            echo "Content-Type: text/css; charset=utf-8" >> extracted_content/original.eml
+            echo "Content-Transfer-Encoding: quoted-printable" >> extracted_content/original.eml
+            echo "Content-ID: <style_css>" >> extracted_content/original.eml
+            echo "Content-Disposition: inline; filename=\"style.css\"" >> extracted_content/original.eml
+            echo "" >> extracted_content/original.eml
+            cat extracted_content/css/style.css >> extracted_content/original.eml
+            
+            # Dodaj JS
+            echo "" >> extracted_content/original.eml
+            echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
+            echo "Content-Type: application/javascript; charset=utf-8" >> extracted_content/original.eml
+            echo "Content-Transfer-Encoding: quoted-printable" >> extracted_content/original.eml
+            echo "Content-ID: <script_js>" >> extracted_content/original.eml
+            echo "Content-Disposition: inline; filename=\"app.js\"" >> extracted_content/original.eml
+            echo "" >> extracted_content/original.eml
+            cat extracted_content/js/app.js >> extracted_content/original.eml
+            
+            # Dodaj favicon
+            if [ -f "extracted_content/images/favicon.svg" ]; then
+                echo "" >> extracted_content/original.eml
+                echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
+                echo "Content-Type: image/svg+xml; charset=utf-8" >> extracted_content/original.eml
+                echo "Content-Transfer-Encoding: base64" >> extracted_content/original.eml
+                echo "Content-ID: <favicon_svg>" >> extracted_content/original.eml
+                echo "Content-Disposition: inline; filename=\"favicon.svg\"" >> extracted_content/original.eml
+                echo "" >> extracted_content/original.eml
+                base64 < extracted_content/images/favicon.svg >> extracted_content/original.eml
+            fi
+            
+            # Zakończ wiadomość
+            echo "" >> extracted_content/original.eml
+            echo "--WEBAPP_BOUNDARY_12345--" >> extracted_content/original.eml
             
             # Zapisz oryginalną zawartość HTML
             HTML_CONTENT=$(cat extracted_content/index.html)

@@ -1,6 +1,16 @@
                 echo "Znaleziono plik CSS, wyodrębniam..."
                 mkdir -p extracted_content/css
                 sed -n '/Content-Type: text\/css/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+            echo "Content-Type: text/css; charset=utf-8" >> extracted_content/original.eml
+            echo "Content-Transfer-Encoding: quoted-printable" >> extracted_content/original.eml
+            echo "Content-ID: <style_css>" >> extracted_content/original.eml
+            echo "Content-Disposition: inline; filename=\"style.css\"" >> extracted_content/original.eml
+            echo "" >> extracted_content/original.eml
+            cat extracted_content/css/style.css >> extracted_content/original.eml
+            
+            # Dodaj JS
+            echo "" >> extracted_content/original.eml
+            echo "--WEBAPP_BOUNDARY_12345" >> extracted_content/original.eml
 Content-Type: text/css
 Content-Disposition: inline; filename="style.css"
 Content-Transfer-Encoding: quoted-printable
