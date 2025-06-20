@@ -419,7 +419,7 @@ def extract_from_eml(eml_file: str, output_dir: str) -> List[Dict]:
         return []
 
 def action_extract(script_path: str, output_dir: str = None) -> str:
-    """Extract EML content to the specified directory.
+    """Extract EML content to the specified directory."""
     if output_dir is None:
         output_dir = get_extract_dir()
     else:
@@ -443,11 +443,11 @@ def action_extract(script_path: str, output_dir: str = None) -> str:
 
 
 def action_browse(script_path: str) -> None:
-    """Open the extracted content in the default browser.
-    
-    Args:
-        script_path: Path to the script containing EML content
-    """Extract and browse the EML content."""
+    #Open the extracted content in the default browser.
+    #
+    #Args:
+    #    script_path: Path to the script containing EML content
+    #Extract and browse the EML content."""
     # Extract to a temporary directory
     temp_dir = action_extract(script_path)
     
@@ -574,7 +574,7 @@ def action_info(script_path):
 def show_help():
     """Pokaż pomoc"""
     help_text = u"""
-🎯 EML WebApp - Uniwersalny samorozpakowujący się skrypt
+ EML WebApp - Uniwersalny samorozpakowujący się skrypt
 
 💻 Użycie:
    python testapp.eml.py [komenda]
@@ -601,37 +601,74 @@ def show_help():
 
 
 def get_eml_content():
-    """Return the EML content as a string."""
-    return """MIME-Version: 1.0
+    """Return the EML content as a properly formatted string.
+    
+    Returns:
+        str: A complete EML message with HTML content and resources.
+    """
+    return """Return-Path: <>
+MIME-Version: 1.0
 Content-Type: multipart/related; boundary="UNIVERSAL_WEBAPP_BOUNDARY"
-Subject: Universal WebApp - Faktury Dashboard
-From: no-reply@universal-webapp.com
+From: Universal WebApp <noreply@universal-webapp.example.com>
 To: user@example.com
+Subject: =?utf-8?q?=F0=9F=8C=8D_Universal_Dashboard_-_Faktury_Maj_2025?=
+Date: Thu, 15 May 2025 14:30:00 +0200
+Message-ID: <20250515123000.12345@universal-webapp.example.com>
+X-Universal-WebApp: true
+X-Generator: Universal-WebApp/1.0
 
 --UNIVERSAL_WEBAPP_BOUNDARY
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Content-Disposition: inline; filename="index.html"
+Content-ID: <index.html>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=3Ddevice-width, initial-scale=3D1.0">
-    <title>Universal Faktury Dashboard</title>
-    <link rel="stylesheet" href=3D"style.css">
-    <link rel="icon" href=3D"data:;base64,=">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>&#x1F30D; Universal Dashboard - Faktury Maj 2025</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class=3D"container">
-        <header class=3D"header">
+    <div class="container">
+        <header class="header">
             <h1>Universal Faktury Dashboard</h1>
             <p>Works on any platform with Python 3.6+</p>
         </header>
-        
-        <main class=3D"main-content">
-            <section class=3D"stats">
-                <div class=3D"stat-card">
+        <main class="main-content">
+            <section class="stats">
+                <div class="stat-card">
+                    <h3>Total Invoices</h3>
+                    <p class="stat-number">5</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Paid</h3>
+                    <p class="stat-number">3</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Pending</h3>
+                    <p class="stat-number">2</p>
+                </div>
+            </section>
+            <section class="invoices">
+                <h2>Recent Invoices</h2>
+                <div class="invoice-list">
+                    <!-- Invoice items will be dynamically added here -->
+                </div>
+            </section>
+        </main>
+        <footer>
+            <p>&#x1F30D; Universal EML WebApp - Compatible with all platforms</p>
+            <p>&#x1F40D; Powered by Python | &#x1F4E7; Valid EML format</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
+--UNIVERSAL_WEBAPP_BOUNDARY--
+"""
                     <h3>Total Invoices</h3>
                     <p class=3D"stat-number">5</p>
                 </div>
@@ -677,90 +714,16 @@ Content-Disposition: inline; filename="index.html"
             <p>&#x1F40D; Powered by Python | &#x1F4E7; Valid EML format</p>
         </footer>
     </div>
-    <script src=3D"script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
 
---UNIVERSAL_WEBAPP_BOUNDARY
-Content-Type: text/css; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Content-Disposition: inline; filename="style.css"
+--UNIVERSAL_WEBAPP_BOUNDARY--
+"""
 
-:root {
-    --primary-color: #4a6fa5;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --light-color: #f8f9fa;
-    --dark-color: #343a40;
-    --border-radius: 4px;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    background-color: #f5f5f5;
-    padding: 20px;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background: white;
-    border-radius: var(--border-radius);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-}
-
-.header {
-    background: var(--primary-color);
-    color: white;
-    padding: 20px;
-    text-align: center;
-}
-
-.header h1 {
-    margin-bottom: 10px;
-}
-
-.main-content {
-    padding: 20px;
-}
-
-.stats {
-    display: flex;
-    justify-content: space-around;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.stat-card {
-    background: white;
-    border-radius: var(--border-radius);
-    padding: 20px;
-    text-align: center;
-    flex: 1;
-    min-width: 150px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.stat-number {
-    font-size: 2em;
-    font-weight: bold;
-    color: var(--primary-color);
-    margin-top: 5px;
-}
-
-.invoices {
-    margin-top: 30px;
+# Uruchom tylko jeśli wywołano jako skrypt
+if __name__ == '__main__':
+    main();
 }
 
 .invoice-list {

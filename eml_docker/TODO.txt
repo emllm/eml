@@ -1,0 +1,16 @@
+esktrakcja do folderu extracted_content a nie do tmp/
+]$ bash docker.eml.sh extract
+Wyodrębnianie plików z EML...
+✓ index.html (1948 bytes)
+✓ style.css (2271 bytes)
+✓ script.js (966 bytes)
+✓ invoice1_thumb.jpg (357 bytes)
+✓ invoice2_thumb.jpg (357 bytes)
+✓ Dockerfile (680 bytes)
+✓ metadata.json (445 bytes)
+Extracted to: /tmp/webapp_70484
+(base) [tom@devop eml_docker]$ bash docker.eml.sh run
+Uruchamianie jako Docker container...
+docker.eml.sh: line 80: docker.eml.sh: command not found
+Błąd: Brak Dockerfile w EML
+(base) [tom@devop eml_docker]$
