@@ -39,18 +39,16 @@ if [ "$1" = "extract" ] || [ "$1" = "run" ] || [ "$1" = "browse" ] || [ "$1" = "
                     sed '1d;$d' > extracted_content/js/app.js
             fi
             
-            # Dodaj favicon
-            echo "Dodaję favicon..."
-            mkdir -p extracted_content/images
-            cat > extracted_content/images/favicon.svg << 'FAVICON'
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="6" fill="#4f46e5"/>
-  <path d="M16 8L20 12H12L16 8Z" fill="white"/>
-  <path d="M12 14H20V22H12V14Z" fill="white"/>
-  <path d="M8 24H24V26H8V24Z" fill="white"/>
-</svg>
-FAVICON
+            # Wyodrębnij favicon
+            if grep -q 'Content-Type: image/svg+xml.*favicon' "$0"; then
+                echo "Znaleziono favicon, wyodrębniam..."
+                mkdir -p extracted_content/images
+                sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    grep -v '^Content-' | \
+                    base64 -d > extracted_content/images/favicon.svg 2>/dev/null || \
+                    sed -n '/Content-Type: image\/svg\+xml.*favicon/,/--WEBAPP_BOUNDARY_/p' "$0" | \
+                    grep -v '^Content-' > extracted_content/images/favicon.svg
+            fi
             
             # Skopiuj oryginalny plik EML
             cp "$0" extracted_content/original.eml
@@ -59,7 +57,7 @@ FAVICON
             sed -i 's|href="cid:style_css"|href="css/style.css"|g' extracted_content/index.html
             sed -i 's|src="cid:app_js"|src="js/app.js"|g' extracted_content/index.html
             
-            # Dodaj link do favicon w head
+            # Dodaj link do favicon w head, jeśli nie istnieje
             if ! grep -q 'link.*favicon' extracted_content/index.html; then
                 sed -i '/<head>/a \    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">' extracted_content/index.html
             fi
@@ -391,6 +389,19 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 
 --WEBAPP_BOUNDARY_12345
+Content-Type: image/svg+xml
+Content-ID: <favicon_svg>
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename="favicon.svg"
+
+PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzIiIGhl
+aWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIw
+MDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjNGY0
+NmVlIi8+CiAgPHBhdGggZD0iTTE2IDhMMjAgMTJIMTJMMTYgOFoiIGZpbGw9IndoaXRlIi8+CiAg
+PHBhdGggZD0iTTEyIDE0SDIwVjIySDEyVjE0WiIgZmlsbD0id2hpdGUiLz4KICA8cGF0aCBkPSJN
+OCAyNEgyNFYyNkg4VjI0WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==
+
+--WEBAPP_BOUNDARY_12345
 Content-Type: application/json
 Content-Transfer-Encoding: quoted-printable
 Content-Disposition: inline; filename="metadata.json"
@@ -405,6 +416,7 @@ Content-Disposition: inline; filename="metadata.json"
     "index.html",
     "style.css",
     "script.js",
+    "favicon.svg",
     "invoice1_thumb.jpg",
     "invoice2_thumb.jpg",
     "Dockerfile"
