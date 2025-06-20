@@ -264,10 +264,10 @@ document.addEventListener('DOMContentLoaded', function() {
 JS_EOF
 
 # Start the web server
-echo "Starting web server on port 8080..."
-echo "Web application available at: http://localhost:8080"
+echo "Starting web server on port 8081..."
+echo "Web application available at: http://localhost:8081"
 echo "Press Ctrl+C to stop the server"
 
 # Start Python HTTP server in the background
 cd "$TEMP_DIR"
-python3 -m http.server 8080
+python3 -m http.server 8081

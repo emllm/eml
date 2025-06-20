@@ -156,27 +156,20 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-## 📧 Contact
-
-For questions or support, please open an issue on our [GitHub repository](https://github.com/emllm/eml).
-
-Key sections:
-- [Installation Guide](docs/installation/index.md)
-- [Usage Examples](docs/usage/index.md)
-- [API Reference](docs/api/index.md)
-- [Contributing](CONTRIBUTING.md)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on how to submit pull requests, report issues, or suggest new features.
-
 ## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 📫 Contact
 
-For questions or support, please open an issue on [GitHub](https://github.com/emllm/eml/issues).
+For questions or support, please open an issue on our [GitHub repository](https://github.com/emllm/eml/issues).
+
+## 📚 Documentation
+
+For more detailed information, please refer to:
+- [Installation Guide](docs/installation/index.md)
+- [Usage Examples](docs/usage/index.md)
+- [API Reference](docs/api/index.md)
 
 ---
 
@@ -184,35 +177,67 @@ For questions or support, please open an issue on [GitHub](https://github.com/em
   Made with ❤️ by the EMLLM Team
 </p>
 
+## About EMLLM
+
 EMLLM is an advanced system for AI-generated software distribution, using email infrastructure as a transport protocol. The system combines the capabilities of Large Language Models with traditional email infrastructure, enabling the automatic distribution of dynamically generated code/applications.
 
-## 🛠️ Installation
+## 📦 Installation
 
 ```bash
+# Using pip
 pip install emllm
+
+# Or using the repository
+git clone https://github.com/emllm/eml.git
+cd eml
+docker-compose up -d
 ```
 
-- Trudność w code signing i verification
-- Podatność na email interception
+## Known Limitations
 
-**Problemy ze skalowalnością:**
-- Email attachment size limits (zazwyczaj 25-50MB)
-- SMTP delivery delays i retry mechanisms
-- Brak real-time feedback o deployment status
+### Security Considerations
+- Code signing and verification challenges
+- Email interception vulnerabilities
+- Risk of malicious code execution
+- Lack of sandboxing mechanisms
+- Difficulty in verifying application source
 
-**Złożoność debugowania:**
-- Trudność w śledzeniu błędów deployment
-- Ograniczone logging capabilities
-- Problemy z dependency resolution
+### Scalability
+- Email attachment size limits (typically 25-50MB)
+- SMTP delivery delays and retry mechanisms
+- Lack of real-time deployment status feedback
 
-**Compliance i audit issues:**
-- Potencjalne konflikty z corporate IT policies
-- Trudności w change management tracking
-- Legal issues z automated code distribution
+### Debugging Complexity
+- Challenges in debugging distributed email systems
+- Lack of standardized E2E monitoring tools
+- Difficulties in tracing issues across email hops
 
-## Sposób dystrybucji w praktyce
+### System Integration
+- Need for integration with enterprise systems (SSO, Active Directory)
+- Limited support for some authentication protocols
+- Challenges in corporate email filtering and security policies
 
-### **Architektura systemu**
+### Version Management
+- Difficulty in versioning email-distributed applications
+- Lack of automatic update mechanisms
+- Version conflicts in distributed environments
+
+### Performance
+- Performance limitations with large applications
+- Long generation and transmission times for large attachments
+- Resource constraints on email servers
+
+### User Experience
+- Limited interaction capabilities via email
+- Lack of standardized email interface design
+- Inconsistent rendering across email clients
+
+### Accessibility
+- Varying accessibility support across email clients
+- Limited screen reader support in generated applications
+- Challenges with responsive design in email clients
+
+## System Architecture
 
 ```bash
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐

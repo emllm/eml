@@ -16,10 +16,19 @@ if [ "$0" = "${BASH_SOURCE[0]}" ]; then
 
     case "$ACTION" in
         "extract")
-            echo "Wyodrębnianie plików z EML..."
-            mkdir -p "$TEMP_DIR"
+            # Utwórz katalog extracted_content
+            EXTRACT_DIR="extracted_content"
+            mkdir -p "$EXTRACT_DIR"
+            
+            # Ustaw katalog docelowy
+            TARGET_DIR="$(pwd)/$EXTRACT_DIR"
+            
+            # Wyczyść poprzednią zawartość katalogu
+            rm -rf "$TARGET_DIR"/*
 
-            # Znajdź początek EML (po komentarzach bash)
+            mkdir -p "$TARGET_DIR"
+
+            # Wyodrębnij pliki z EML (po komentarzach bash)
             EML_START=$(grep -n "^MIME-Version:" "$SCRIPT_FILE" | head -1 | cut -d: -f1)
 
             # Wyodrębnij część EML i przetwórz
@@ -54,7 +63,7 @@ for part in msg.walk():
         else:
             continue
 
-    filepath = os.path.join('$TEMP_DIR', filename)
+    filepath = os.path.join('$TARGET_DIR', filename)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
     try:
@@ -71,21 +80,28 @@ for part in msg.walk():
     except Exception as e:
         print(f'✗ Error extracting {filename}: {e}')
 
-print(f'Extracted to: $TEMP_DIR')
+print(f'Extracted to: $TARGET_DIR')
 "
             ;;
 
         "run")
             echo "Uruchamianie jako Docker container..."
-            $0 extract
-
-            if [ -f "$TEMP_DIR/Dockerfile" ]; then
-                cd "$TEMP_DIR"
-                docker build -t "webapp-$(basename $0 .eml.sh)" .
-                echo "Starting container on http://localhost:8080"
-                docker run --rm -p 8080:80 "webapp-$(basename $0 .eml.sh)"
+            
+            # Upewnij się, że pliki są wyodrębnione
+            if [ ! -d "extracted_content" ] || [ -z "$(ls -A extracted_content/)" ]; then
+                $0 extract
+            fi
+            
+            if [ -f "extracted_content/Dockerfile" ]; then
+                cd "extracted_content"
+                echo "Budowanie obrazu Dockera..."
+                docker build -t faktury-app .
+                echo "Uruchamianie kontenera..."
+                docker run -d -p 8080:80 faktury-app
+                echo "Aplikacja dostępna pod adresem: http://localhost:8080"
+                echo "Aby zatrzymać kontener, użyj: docker stop $(docker ps -lq --filter ancestor=faktury-app)"
             else
-                echo "Błąd: Brak Dockerfile w EML"
+                echo "Błąd: Brak Dockerfile w wyodrębnionych plikach"
                 exit 1
             fi
             ;;
@@ -93,26 +109,26 @@ print(f'Extracted to: $TEMP_DIR')
         "browse")
             echo "Otwieranie w przeglądarce..."
             # Debug: List all extracted files
-            echo "Debug: Listing files in $TEMP_DIR:"
-            ls -la "$TEMP_DIR/"
+            echo "Debug: Listing files in $TARGET_DIR:"
+            ls -la "$TARGET_DIR/"
             echo ""
             echo "Debug: Checking for index.html..."
             
             # Check if index.html exists
-            if [ -f "$TEMP_DIR/index.html" ]; then
-                echo "Debug: Found index.html at $TEMP_DIR/index.html"
+            if [ -f "$TARGET_DIR/index.html" ]; then
+                echo "Debug: Found index.html at $TARGET_DIR/index.html"
                 echo "Debug: File details:"
-                ls -la "$TEMP_DIR/index.html"
+                ls -la "$TARGET_DIR/index.html"
                 echo ""
                 echo "Debug: First few lines of index.html:"
-                head -n 5 "$TEMP_DIR/index.html"
+                head -n 5 "$TARGET_DIR/index.html"
                 echo ""
                 # Zamień Content-ID references na lokalne pliki
                 python3 -c "
 import re
 import os
 
-html_file = '$TEMP_DIR/index.html'
+html_file = '$TARGET_DIR/index.html'
 with open(html_file, 'r') as f:
     content = f.read()
 
@@ -125,11 +141,11 @@ with open(html_file, 'w') as f:
 "
 
                 # Otwórz w przeglądarce
-                echo "Files extracted to: $TEMP_DIR"
-                echo "Trying to open: file://$TEMP_DIR/index.html"
+                echo "Extracted to: $TARGET_DIR"
+                echo "Trying to open: file://$TARGET_DIR/index.html"
                 
                 # Start a simple Python HTTP server in the background
-                (cd "$TEMP_DIR" && python3 -m http.server 8080 &) >/dev/null 2>&1
+                (cd "$TARGET_DIR" && python3 -m http.server 8080 &) >/dev/null 2>&1
                 SERVER_PID=$!
                 
                 # Give the server a moment to start
