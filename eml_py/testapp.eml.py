@@ -598,7 +598,6 @@ def show_help():
 
 📧 Ten plik jest również prawidłowym emailem EML!"""
     print(help_text)
-    print(help_text)
 
 
 def get_eml_content():

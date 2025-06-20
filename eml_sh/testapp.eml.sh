@@ -204,7 +204,7 @@ EOM
                 "$0" extract
             fi
             # Uruchom prosty serwer HTTP
-            echo "Aplikacja dostępna pod adresem: http://localhost:8000"
+            echo "Aplikacja dostępna pod adresem: http://localhost:8888"
             cd extracted_content
             # Użyj Pythona z prostym serwerem HTTP z obsługą CORS
             python3 -c '
@@ -223,13 +223,13 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     server_address = ("", 8000)
     httpd = HTTPServer(server_address, CORSRequestHandler)
-    print("Serwer działa pod adresem http://localhost:8000")
+    print("Serwer działa pod adresem http://localhost:8888")
     httpd.serve_forever()
 '
             ;;
         browse)
             echo "Otwieranie w przeglądarce..."
-            xdg-open "http://localhost:8000" 2>/dev/null || open "http://localhost:8000" 2>/dev/null || echo "Nie udało się otworzyć przeglądarki"
+            xdg-open "http://localhost:8888" 2>/dev/null || open "http://localhost:8888" 2>/dev/null || echo "Nie udało się otworzyć przeglądarki"
             ;;
         info)
             echo "Informacje o skrypcie:"

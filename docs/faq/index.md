@@ -26,7 +26,7 @@ emllm parse "From: test@example.com\nTo: recipient@example.com\nSubject: Test"
 import requests
 
 response = requests.post(
-    "http://localhost:8000/parse",
+    "http://localhost:8888/parse",
     json={"content": "From: test@example.com\nTo: recipient@example.com\nSubject: Test"}
 )
 ```
